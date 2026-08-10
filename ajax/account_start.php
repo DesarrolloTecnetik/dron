@@ -3,7 +3,7 @@
    require_once '../init.conf';
    $CR->ajaxToken();
 
-   $email = !empty( $_POST['user'] ) ? $_POST['user'] : null;
+   $email = !empty( $_POST['user'] ) ? trim($_POST['user']) : null;
    $pass = !empty( $_POST['pass'] ) ? $_POST['pass'] : null;
    $remember = !empty( $_POST['remember'] ) ? $_POST['remember'] : "off";
    $password = $CR->encripter($pass);
@@ -11,15 +11,20 @@
    // is null vars (?)
    $null_array = compact('email', 'pass');
    if( in_array('', $null_array) ) { echo $CR->updateJS(' alerta("error null fields", "danger"); button(true); '); } else {
-         
-      // check email exist (?)
-      $existEmail = $CR->count_rows('login', 'WHERE user = :var', 'user', $email);
 
-      if( $existEmail <= 0 ) { echo $CR->updateJS(' alerta("error dont exist user/mail", "danger"); button(true); '); } else {
+      $userLookup = $db->query("SELECT userid FROM login WHERE user = :login OR email = :login2 LIMIT 1");
+      $db->bind(':login', $email);
+      $db->bind(':login2', $email);
+      $db->execute();
+      $lookupCount = $db->rowCount();
+      $db->CloseConnection();
 
-         // get data user 
-         $userData = $db->query("SELECT pass, userid, user, verified, email, name, server FROM login WHERE user = :us1");
+      if( $lookupCount <= 0 ) { echo $CR->updateJS(' alerta("error dont exist user/mail", "danger"); button(true); '); } else {
+
+         // get data user
+         $userData = $db->query("SELECT pass, userid, user, verified, email, name, server FROM login WHERE user = :us1 OR email = :us2 LIMIT 1");
          $db->bind(':us1', $email);
+         $db->bind(':us2', $email);
          $db->execute(); $usData = $db->single(); $db->CloseConnection();
 
          $usPass  = $usData['pass'];
@@ -175,7 +180,7 @@
 
                      // change Status LoockScreen
                      $CR->updateData("login", "status", 1, "userid", $usId);
-                     $CR->updateData("login", "statusd", 1, "userid", $usId);
+                     $CR->updateData("login", "status", 1, "userid", $usId);
 
                      // goLogout is null
                      if( $goLogout == null ) { $goURL = URL."/redirect"; } else { $goURL = $_SESSION['gologout']; }

@@ -20,7 +20,11 @@
 		}
 		$cssHref = $cssBase . '/assets/css/radar.css';
 	?>
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 	<link rel="stylesheet" href="<?php echo htmlspecialchars($cssHref); ?>">
+
+	<script src="<?php echo htmlspecialchars($cssBase); ?>/assets/js/chart.umd.min.js"></script>
+	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 
 	<?php if(!empty($metaSEO)) { echo $metaSEO; } ?>
 </head>

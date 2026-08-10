@@ -63,6 +63,79 @@ a{color:inherit;text-decoration:none;}
 }
 .pilot-id .dot{width:6px;height:6px;border-radius:50%;background:var(--green);}
 
+.topbar-profile{display:flex;align-items:center;justify-content:flex-end;}
+.topbar-profile .login-button,
+.topbar-profile .logout-button{
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:600;padding:7px 12px;border-radius:99px;
+  border:1px solid var(--border-strong);background:var(--win);color:var(--ink);
+}
+.topbar-profile .logout-button{
+  margin-left:10px;color:var(--red);background:#FFF7F6;
+}
+.user-chip{display:flex;align-items:center;gap:10px;}
+.avatar-thumb{width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid var(--win);box-shadow:0 0 0 1px var(--border-strong);}
+.user-chip-text{line-height:1.15;min-width:0;}
+.user-chip-text .user-name{font-size:12px;font-weight:700;color:var(--ink);}
+.user-chip-text .user-sub{font-family:var(--mono);font-size:9px;color:var(--ink-faint);margin-top:4px;}
+
+/* ===== LOGIN MODAL ===== */
+.login-modal-overlay{
+  position:fixed;inset:0;z-index:90;
+  background:rgba(20,23,26,0.54);backdrop-filter:blur(4px);
+  display:none;align-items:center;justify-content:center;
+  padding:20px;
+}
+.login-modal-overlay.is-open{display:flex;}
+.login-modal-shell{
+  position:relative;width:min(100%, 500px);
+  background:var(--win);border:1px solid var(--border-strong);
+  border-radius:20px;box-shadow:0 30px 100px rgba(20,23,26,0.35);
+}
+.login-modal-shell .modal-close{
+  position:absolute;top:12px;right:12px;border:none;background:transparent;
+  font-size:30px;line-height:1;color:var(--ink-dim);cursor:pointer;
+}
+.login-modal-body{padding:34px 40px 38px;}
+.login-modal-brand{display:flex;align-items:center;gap:12px;margin-bottom:24px;}
+.login-modal-brand .brand-mark.small{width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:var(--ink);}
+.login-modal-brand .brand-mark.small svg{width:20px;height:20px;}
+.login-modal-eyebrow{font-family:var(--mono);font-size:9px;color:var(--accent);letter-spacing:1px;text-transform:uppercase;}
+.login-modal-brand h2{font-family:var(--grot);font-size:26px;margin-top:4px;letter-spacing:-0.02em;}
+.login-modal-form .field-label{margin-top:18px;}
+.login-modal-form .login-options{margin-bottom:18px;}
+.login-modal-form .btn-login{width:100%;justify-content:center;}
+
+.login-layout{
+  min-height:100vh;display:grid;grid-template-columns:1fr minmax(420px, 480px);
+  background:linear-gradient(135deg, #172124 0%, #1F332C 100%);
+}
+.login-art{display:flex;align-items:center;justify-content:center;padding:60px;position:relative;overflow:hidden;}
+.login-art:before{content:"";position:absolute;inset:-20%;background:radial-gradient(circle,rgba(255,255,255,0.11),transparent 58%);}
+.login-art-content{position:relative;z-index:1;color:#fff;max-width:420px;}
+.login-art-content h1{font-family:var(--grot);font-size:60px;line-height:0.92;letter-spacing:-0.05em;margin-top:28px;}
+.login-kicker{font-family:var(--mono);font-size:11px;margin-top:14px;letter-spacing:2px;text-transform:uppercase;color:#DCEAE6;}
+.login-status-grid{margin-top:52px;display:flex;gap:36px;}
+.login-status-grid .small-label{display:block;font-family:var(--mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#A9C1BD;}
+.login-status-grid strong{display:block;margin-top:6px;font-family:var(--grot);font-size:15px;}
+.brand-badge{width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:#fff;color:#172124;}
+.brand-badge svg{width:30px;height:30px;}
+.login-panel-wrap{background:var(--desk);display:flex;align-items:center;justify-content:center;padding:24px;}
+.login-panel{width:100%;max-width:420px;background:var(--win);border:1px solid var(--border);border-radius:20px;padding:40px;box-shadow:0 30px 90px rgba(18,24,29,0.16);}
+.login-panel h2{font-family:var(--grot);font-size:30px;letter-spacing:-0.04em;margin-top:4px;margin-bottom:26px;}
+.login-top{display:flex;align-items:center;justify-content:space-between;}
+.login-eyebrow{margin-bottom:2px;}
+.login-orb{width:34px;height:34px;border-radius:50%;border:1px solid var(--border-strong);display:flex;align-items:center;justify-content:center;}
+.login-orb span{width:12px;height:12px;border-radius:50%;background:var(--green);}
+.field-label{display:block;margin-bottom:8px;margin-top:14px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--ink-dim);}
+.field-input{width:100%;height:38px;border-radius:8px;border:1px solid var(--border-strong);padding:10px 12px;background:#fff;color:var(--ink);font:inherit;outline:none;}
+.field-input:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(255,90,41,0.16);}
+.login-options{display:flex;align-items:center;justify-content:space-between;margin-top:16px;margin-bottom:20px;font-size:11px;color:var(--ink-dim);}
+.check-row{display:flex;align-items:center;gap:8px;}
+.text-link{color:var(--accent);font-weight:600;}
+.btn-login{width:100%;justify-content:center;}
+.login-message{margin-top:12px;font-size:11px;color:var(--ink-dim);}
+
 /* ===== INTRO ===== */
 .intro{max-width:1160px;margin:0 auto;padding:44px 32px 8px;}
 .eyebrow{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;}
@@ -92,6 +165,7 @@ a{color:inherit;text-decoration:none;}
 .win-status{font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:100px;letter-spacing:0.3px;}
 .win-status.green{background:var(--green-soft);color:var(--green);}
 .win-status.amber{background:var(--amber-soft);color:var(--amber);}
+.win-status.red{background:#FBEAE8;color:var(--red);}
 .win-status.neutral{background:var(--desk);color:var(--ink-faint);}
 
 .win-body{padding:22px;}
@@ -102,6 +176,11 @@ a{color:inherit;text-decoration:none;}
 
 /* ===== ESTADO WINDOW ===== */
 .estado-body{display:grid;grid-template-columns:180px 1fr;gap:28px;align-items:center;}
+.estado-location{
+  display:flex;align-items:center;gap:6px;margin-bottom:14px;
+  font-family:var(--mono);font-size:11.5px;color:var(--ink-dim);
+}
+.estado-location svg{width:13px;height:13px;flex-shrink:0;color:var(--accent);}
 .light-ring{
   width:76px;height:76px;border-radius:50%;border:1.5px solid var(--green);
   display:flex;align-items:center;justify-content:center;margin:0 auto 12px;
@@ -134,17 +213,70 @@ a{color:inherit;text-decoration:none;}
 }
 .btn.accent{background:var(--accent);}
 
-/* ===== MAPA WINDOW ===== */
-.map-frame{
-  height:170px;border-radius:8px;border:1px solid var(--border);
-  background:
-    linear-gradient(var(--border) 1px, transparent 1px) 0 0/26px 26px,
-    linear-gradient(90deg, var(--border) 1px, transparent 1px) 0 0/26px 26px,
-    #FAFAFB;
-  position:relative;margin-bottom:14px;
+/* ===== CLIMA / PRONÓSTICO ===== */
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px;}
+.chart-col{min-width:0;}
+.chart-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px;}
+.chart-label{font-size:12.5px;font-weight:500;color:var(--ink);}
+.chart-value{font-family:var(--grot);font-size:15px;font-weight:600;color:var(--ink);}
+.chart-value small{font-family:var(--sans);font-size:11px;color:var(--ink-faint);font-weight:400;}
+.chart-frame{height:170px;position:relative;}
+.chart-empty{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:80%;text-align:center;font-size:12px;color:var(--ink-faint);line-height:1.5;
 }
-.map-pin{position:absolute;top:44%;left:52%;width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 5px var(--accent-soft);}
-.map-zone{position:absolute;top:28%;left:34%;width:90px;height:90px;border-radius:50%;border:1.5px dashed var(--green);opacity:0.55;}
+
+/* ===== CICLO SOLAR ===== */
+.sun-track{margin-bottom:22px;}
+.sun-bar{
+  position:relative;height:8px;border-radius:100px;
+  background:linear-gradient(90deg, #E7E9EC 0%, #E7E9EC 100%);
+  overflow:visible;
+}
+.sun-bar-fill{
+  position:absolute;top:0;left:0;height:100%;border-radius:100px;
+  background:linear-gradient(90deg, #FFD27A 0%, var(--accent) 100%);
+  transition:width 0.4s ease;
+}
+.sun-marker{
+  position:absolute;top:50%;width:22px;height:22px;border-radius:50%;
+  background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft), 0 2px 6px rgba(20,23,26,0.18);
+  display:flex;align-items:center;justify-content:center;
+  transform:translate(-50%,-50%);transition:left 0.4s ease;
+}
+.sun-marker svg{width:13px;height:13px;}
+.sun-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-bottom:16px;}
+.sun-grid .data-item{padding:0 18px;border-left:1px solid var(--border);}
+.sun-grid .data-item:first-child{padding-left:0;border-left:none;}
+
+/* ===== GEOCERCAS / MAPA ===== */
+.geo-body{display:grid;grid-template-columns:1.5fr 1fr;gap:24px;align-items:start;}
+.geo-map-col{min-width:0;}
+.geo-map{
+  height:340px;border-radius:8px;border:1px solid var(--border);
+  background:#EDEFF1;position:relative;z-index:0;
+}
+.loc-label{font-family:var(--mono);font-size:11px;color:var(--ink-dim);margin-top:10px;}
+
+.geo-side-col{min-width:0;}
+.geo-legend{display:flex;flex-direction:column;gap:9px;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border);}
+.geo-legend-item{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--ink-dim);}
+.geo-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.geo-dot.green{background:var(--green);box-shadow:0 0 0 3px var(--green-soft);}
+.geo-dot.amber{background:var(--amber);box-shadow:0 0 0 3px var(--amber-soft);}
+.geo-dot.red{background:var(--red);box-shadow:0 0 0 3px #FBEAE8;}
+
+.geo-zone-list{margin-top:14px;display:flex;flex-direction:column;gap:2px;max-height:220px;overflow-y:auto;}
+.geo-zone-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);}
+.geo-zone-row:last-child{border-bottom:none;}
+.geo-zone-row .geo-dot{margin-top:5px;}
+.geo-zone-name{font-size:13px;font-weight:500;}
+.geo-zone-meta{font-size:11.5px;color:var(--ink-faint);margin-top:2px;}
+.geo-zone-empty{font-size:12.5px;color:var(--ink-faint);padding:6px 0;}
+
+/* Ajustes visuales de Leaflet para que combine con la interfaz */
+.geo-map .leaflet-control-attribution{font-size:9.5px;background:rgba(255,255,255,0.75);}
+.geo-map .leaflet-bar a{color:var(--ink);}
 
 /* ===== BITACORA ===== */
 .flight-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--border);font-size:13px;}
@@ -186,4 +318,9 @@ p.desc{color:var(--ink-dim);font-size:13px;line-height:1.55;}
   .estado-body{grid-template-columns:1fr;}
   .data-grid{grid-template-columns:repeat(2,1fr);row-gap:16px;}
   .data-item{border-left:none;padding-left:0;}
+  .chart-grid{grid-template-columns:1fr;gap:26px;}
+  .sun-grid{grid-template-columns:repeat(2,1fr);row-gap:16px;}
+  .sun-grid .data-item{border-left:none;padding-left:0;}
+  .geo-body{grid-template-columns:1fr;}
+  .geo-map{height:260px;}
 }

@@ -47,16 +47,237 @@
 						const country = locationInfo.country || 'país';
 						locationLabel.textContent = 'Ubicación: ' + zone + ', ' + municipality + ', ' + state + ', ' + country + ' · ' + Number(lat).toFixed(5) + ', ' + Number(lon).toFixed(5);
 					}
-					const desc = document.querySelector('#win-mapa .desc');
-					if (desc) {
-						if (geofences && geofences.near_geofences && geofences.near_geofences.length) {
-							desc.textContent = 'Zonas cercanas detectadas: ' + geofences.near_geofences.length + ' · ' + (geofences.risk_level || 'advisory');
-						} else {
-							desc.textContent = 'Sin zonas restringidas ni áreas protegidas detectadas en un radio cercano.';
-						}
+					const estadoLocationText = document.getElementById('estado-location-text');
+					if (estadoLocationText) {
+						const parts = [locationInfo.zone, locationInfo.municipality, locationInfo.state].filter(Boolean);
+						estadoLocationText.textContent = parts.length ? parts.join(', ') : ('Lat ' + Number(lat).toFixed(4) + ', Lon ' + Number(lon).toFixed(4));
 					}
+
+					updateClimateCharts(weather);
+					updateSunPanel(weather);
+					updateRiskBadges(geofences);
+					updateGeoMap(geofences, lat, lon);
 				})
 				.catch(error => console.log('Live telemetry error:', error));
+		}
+
+		function riskPresentation(riskLevel) {
+			if (riskLevel === 'restricted') {
+				return { badgeClass: 'red', badgeLabel: 'No volar', ringClass: 'red', flightLabel: 'No volar aquí', color: '#D6483C' };
+			}
+			if (riskLevel === 'advisory') {
+				return { badgeClass: 'amber', badgeLabel: 'Precaución', ringClass: 'amber', flightLabel: 'Volar con precaución', color: '#C98A12' };
+			}
+			return { badgeClass: 'green', badgeLabel: 'Zona verde', ringClass: '', flightLabel: 'Puedes volar', color: '#1FA463' };
+		}
+
+		function updateRiskBadges(geofences) {
+			const riskLevel = (geofences && geofences.risk_level) ? geofences.risk_level : 'none';
+			const geoStatusText = (riskLevel === 'none') ? 'Sin restricciones' : riskLevel.toUpperCase();
+			const p = riskPresentation(riskLevel);
+
+			const applyBadge = (id) => {
+				const el = document.getElementById(id);
+				if (!el) { return; }
+				el.classList.remove('green', 'amber', 'red', 'neutral');
+				el.classList.add(p.badgeClass);
+				el.textContent = p.badgeLabel;
+			};
+			applyBadge('estado-status-badge');
+			applyBadge('mapa-status-badge');
+
+			const ring = document.getElementById('estado-light-ring');
+			if (ring) {
+				ring.classList.remove('amber', 'red');
+				if (p.ringClass) { ring.classList.add(p.ringClass); }
+			}
+			const label = document.getElementById('estado-light-label');
+			if (label) { label.textContent = p.flightLabel; }
+			const sub = document.getElementById('estado-light-sub');
+			if (sub) { sub.textContent = geoStatusText; }
+
+			const summary = document.getElementById('geo-summary');
+			if (summary) {
+				const zones = (geofences && geofences.near_geofences) ? geofences.near_geofences : [];
+				summary.textContent = zones.length
+					? ('Zonas cercanas detectadas: ' + zones.length + ' · Nivel: ' + riskLevel)
+					: 'Sin zonas restringidas ni áreas protegidas detectadas en un radio cercano.';
+			}
+		}
+
+		const GEO_TYPE_LABELS = {
+			aerodrome: 'Aeródromo',
+			aeropuerto: 'Aeropuerto',
+			airport: 'Aeropuerto',
+			military: 'Zona militar',
+			military_area: 'Zona militar',
+			danger_area: 'Zona de riesgo / no volar',
+			protected_area: 'Área protegida',
+			no_fly: 'No volar',
+			no_volar: 'No volar',
+			zona_no_volar: 'No volar',
+			restricted_zone: 'Zona restringida'
+		};
+		const GEO_DEFAULT_RADIUS = { aerodrome: 1500, aeropuerto: 1500, airport: 1500, military: 2000, military_area: 2000, danger_area: 2000, protected_area: 1000, no_fly: 1200, no_volar: 1200, zona_no_volar: 1200, restricted_zone: 1200 };
+
+		function geoZoneRadius(zone) {
+			if (zone.radio_m) { return zone.radio_m; }
+			return GEO_DEFAULT_RADIUS[zone.type] || 800;
+		}
+
+		function geoZoneDistance(zone, centerLat, centerLon) {
+			if (typeof zone.distance_m === 'number') { return zone.distance_m; }
+			if (zone.lat === undefined || zone.lon === undefined || zone.lat === null || zone.lon === null) { return null; }
+			const earthRadius = 6371000;
+			const dLat = (zone.lat - centerLat) * Math.PI / 180;
+			const dLon = (zone.lon - centerLon) * Math.PI / 180;
+			const a = Math.sin(dLat / 2) ** 2 + Math.cos(centerLat * Math.PI / 180) * Math.cos(zone.lat * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+			const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+			return Math.round(earthRadius * c);
+		}
+
+		function updateGeoZoneList(zones) {
+			const list = document.getElementById('geo-zone-list');
+			if (!list) { return; }
+
+			if (!zones.length) {
+				list.innerHTML = '<p class="geo-zone-empty" id="geo-zone-empty">No hay geocercas activas cerca de tu ubicación.</p>';
+				return;
+			}
+
+			list.innerHTML = zones.map(zone => {
+				const dotClass = (zone.risk_level === 'restricted') ? 'red' : 'amber';
+				const typeLabel = GEO_TYPE_LABELS[zone.type] || 'Zona restringida';
+				const distance = geoZoneDistance(zone, zone._centerLat, zone._centerLon);
+				const distanceText = (distance !== null) ? (' · a ' + (distance / 1000).toFixed(1) + ' km') : '';
+				const safeName = (zone.name || 'Zona sin nombre').replace(/</g, '&lt;');
+				return '<div class="geo-zone-row"><span class="geo-dot ' + dotClass + '"></span>' +
+					'<div class="geo-zone-info"><div class="geo-zone-name">' + safeName + '</div>' +
+					'<div class="geo-zone-meta">' + typeLabel + distanceText + '</div></div></div>';
+			}).join('');
+		}
+
+		function updateGeoMap(geofences, lat, lon) {
+			updateRiskBadges(geofences); // idempotent: keeps badges in sync even if called standalone
+
+			const zonesRaw = (geofences && geofences.near_geofences) ? geofences.near_geofences : [];
+			const zones = zonesRaw.map(z => Object.assign({}, z, { _centerLat: lat, _centerLon: lon }));
+			updateGeoZoneList(zones);
+
+			if (!window.__radarMap) { return; }
+			const { map, zoneColor } = window.__radarMap;
+
+			map.setView([lat, lon], map.getZoom());
+
+			if (window.__radarMap.userMarker) {
+				window.__radarMap.userMarker.setLatLng([lat, lon]);
+			}
+
+			(window.__radarMap.zoneLayers || []).forEach(layer => map.removeLayer(layer));
+			window.__radarMap.zoneLayers = [];
+
+			zones.forEach(zone => {
+				if (zone.lat === undefined || zone.lon === undefined || zone.lat === null || zone.lon === null) { return; }
+				const type = (zone.type || '').toLowerCase();
+				const color = zoneColor(zone.risk_level, type);
+				const circle = L.circle([zone.lat, zone.lon], {
+					radius: geoZoneRadius(zone),
+					color: color,
+					weight: 1.5,
+					fillColor: color,
+					fillOpacity: 0.18
+				}).addTo(map).bindPopup('<strong>' + (zone.name || 'Zona') + '</strong><br>' + (GEO_TYPE_LABELS[type] || GEO_TYPE_LABELS[zone.type] || 'Zona restringida'));
+				window.__radarMap.zoneLayers.push(circle);
+
+				if (type === 'aerodrome' || type === 'airport' || type === 'aeropuerto') {
+					const airportMarker = L.circleMarker([zone.lat, zone.lon], {
+						radius: 6,
+						color: '#1D75DD',
+						weight: 2,
+						fillColor: '#88DBFF',
+						fillOpacity: 0.9
+					}).addTo(map).bindPopup('<strong>' + (zone.name || 'Aeródromo') + '</strong><br>Aeródromo / Aeropuerto');
+					window.__radarMap.zoneLayers.push(airportMarker);
+				}
+			});
+
+			if (!zones.length) {
+				const clearCircle = L.circle([lat, lon], {
+					radius: 1200,
+					color: '#1FA463',
+					weight: 1.5,
+					fillColor: '#1FA463',
+					fillOpacity: 0.10
+				}).addTo(map);
+				window.__radarMap.zoneLayers.push(clearCircle);
+			}
+		}
+
+		function updateClimateCharts(weather) {
+			const forecast = (weather && weather.hourly_forecast) ? weather.hourly_forecast : [];
+			const rainMax = document.getElementById('rain-max-today');
+			const windMax = document.getElementById('wind-max-today');
+
+			if (rainMax) {
+				const pct = (weather && weather.daily && weather.daily.rain_chance_pct !== null && weather.daily.rain_chance_pct !== undefined)
+					? weather.daily.rain_chance_pct + '%' : '--';
+				rainMax.innerHTML = pct + ' <small>hoy</small>';
+			}
+			if (windMax) {
+				const gusts = (weather && weather.gusts_kmh !== null && weather.gusts_kmh !== undefined) ? Math.round(weather.gusts_kmh) : '--';
+				windMax.innerHTML = gusts + ' <small>km/h ráfaga actual</small>';
+			}
+
+			if (!forecast.length || !window.__radarCharts) {
+				toggleEmptyState([], document.getElementById('chart-rain'), document.getElementById('chart-rain-empty'));
+				toggleEmptyState([], document.getElementById('chart-wind'), document.getElementById('chart-wind-empty'));
+				return;
+			}
+
+			const labels = forecast.map(h => h.hour_label);
+			const rain = forecast.map(h => h.rain_chance_pct);
+			const wind = forecast.map(h => h.wind_kmh);
+			const gusts = forecast.map(h => h.gusts_kmh);
+
+			if (window.__radarCharts.rain) {
+				window.__radarCharts.rain.data.labels = labels;
+				window.__radarCharts.rain.data.datasets[0].data = rain;
+				window.__radarCharts.rain.update();
+			}
+			if (window.__radarCharts.wind) {
+				window.__radarCharts.wind.data.labels = labels;
+				window.__radarCharts.wind.data.datasets[0].data = gusts;
+				window.__radarCharts.wind.data.datasets[1].data = wind;
+				window.__radarCharts.wind.update();
+			}
+
+			toggleEmptyState(labels, document.getElementById('chart-rain'), document.getElementById('chart-rain-empty'));
+			toggleEmptyState(labels, document.getElementById('chart-wind'), document.getElementById('chart-wind-empty'));
+		}
+
+		function updateSunPanel(weather) {
+			const sun = (weather && weather.sun) ? weather.sun : null;
+			if (!sun) { return; }
+
+			const setText = (id, value) => {
+				const el = document.getElementById(id);
+				if (el) { el.textContent = value || '--:--'; }
+			};
+			setText('sun-dawn', sun.dawn);
+			setText('sun-sunrise', sun.sunrise);
+			setText('sun-sunset', sun.sunset);
+			setText('sun-dusk', sun.dusk);
+
+			const badge = document.getElementById('sun-daylight-badge');
+			if (badge) {
+				badge.textContent = sun.daylight_label ? (sun.daylight_label + ' de luz') : 'Sin datos';
+			}
+
+			const progress = (sun.day_progress_pct !== null && sun.day_progress_pct !== undefined) ? sun.day_progress_pct : 0;
+			const fill = document.getElementById('sun-bar-fill');
+			const marker = document.getElementById('sun-marker');
+			if (fill) { fill.style.width = progress + '%'; }
+			if (marker) { marker.style.left = progress + '%'; }
 		}
 
 		function startLivePositioning() {
@@ -79,6 +300,81 @@
 				{ enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
 			);
 		}
+
+		(function setupLoginModal() {
+			const modal = document.getElementById('login-modal');
+			if (!modal) { return; }
+			const openButtons = document.querySelectorAll('[data-open-login]');
+			const closeButton = modal.querySelector('.modal-close');
+			const modalForm = document.getElementById('modal-login-form');
+			const openModal = () => {
+				modal.classList.add('is-open');
+			};
+			const closeModal = () => {
+				modal.classList.remove('is-open');
+			};
+			openButtons.forEach(btn => btn.addEventListener('click', event => {
+				event.preventDefault();
+				openModal();
+			}));
+			if (closeButton) { closeButton.addEventListener('click', closeModal); }
+			modal.addEventListener('click', event => {
+				if (event.target === modal) { closeModal(); }
+			});
+			if (modalForm) {
+				modalForm.addEventListener('submit', event => {
+					event.preventDefault();
+					const formData = new FormData(modalForm);
+					const button = document.getElementById('modal-login-button');
+					if (button) {
+						button.disabled = true;
+						button.textContent = 'Conectando...';
+					}
+					fetch('<?php echo URL; ?>/ajax/account_start.php', {
+						method: 'POST',
+						headers: {
+							'X-Requested-With': 'XMLHttpRequest'
+						},
+						body: formData
+					})
+					.then(response => {
+						if (!response.ok) {
+							throw new Error('Login endpoint returned ' + response.status);
+						}
+						return response.text();
+					})
+					.then(text => {
+						const message = document.getElementById('modal-login-message');
+						if (message) {
+							message.innerHTML = text;
+						}
+						const scripts = text.match(/<script[^>]*>([\s\S]*?)<\/script>/gi) || [];
+						for (const scriptTag of scripts) {
+							const inner = scriptTag.match(/<script[^>]*>([\s\S]*?)<\/script>/i);
+							if (inner && inner[1]) {
+								eval(inner[1]);
+							}
+						}
+					})
+					.catch(error => {
+						console.log('Login modal error:', error);
+						const message = document.getElementById('modal-login-message');
+						if (message) {
+							message.innerHTML = '<div class="login-error">No se pudo contactar con el servicio de autenticación.</div>';
+						}
+					})
+					.finally(() => {
+						if (button) {
+							button.disabled = false;
+							button.textContent = 'Entrar';
+						}
+					});
+				});
+			}
+			<?php if (empty($UserID)) : ?>
+				openModal();
+			<?php endif; ?>
+		})();
 
 		startLivePositioning();
 	</script>

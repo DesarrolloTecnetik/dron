@@ -12,12 +12,13 @@ class ExternalApiService {
         $params = array(
             'latitude' => (float) $latitude,
             'longitude' => (float) $longitude,
-            'current' => 'temperature_2m,wind_speed_10m,wind_gusts_10m,wind_direction_10m,relative_humidity_2m,apparent_temperature,precipitation,weather_code',
-            'hourly' => 'temperature_2m,wind_speed_10m,wind_gusts_10m',
-            'daily' => 'temperature_2m_max,temperature_2m_min',
+            'current' => 'temperature_2m,wind_speed_10m,wind_gusts_10m,wind_direction_10m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,is_day',
+            'hourly' => 'temperature_2m,wind_speed_10m,wind_gusts_10m,precipitation_probability,weather_code',
+            'daily' => 'temperature_2m_max,temperature_2m_min,sunrise,sunset,daylight_duration,uv_index_max,precipitation_probability_max',
             'temperature_unit' => 'celsius',
             'wind_speed_unit' => 'kmh',
-            'timezone' => 'auto'
+            'timezone' => 'auto',
+            'forecast_days' => 2
         );
 
         $url = $base . '?' . http_build_query($params);
@@ -29,6 +30,7 @@ class ExternalApiService {
 
         $current = $data['current'];
         $daily = isset($data['daily']) ? $data['daily'] : array();
+        $hourly = isset($data['hourly']) ? $data['hourly'] : array();
 
         $temperature = isset($current['temperature_2m']) ? (float) $current['temperature_2m'] : null;
         $windSpeed = isset($current['wind_speed_10m']) ? (float) $current['wind_speed_10m'] : null;
@@ -38,10 +40,12 @@ class ExternalApiService {
         $visibility = isset($current['visibility']) ? (float) $current['visibility'] : null;
         $precipitation = isset($current['precipitation']) ? (float) $current['precipitation'] : null;
         $weatherCode = isset($current['weather_code']) ? (int) $current['weather_code'] : null;
+        $isDay = isset($current['is_day']) ? (bool) $current['is_day'] : null;
+        $nowTime = isset($current['time']) ? $current['time'] : date('c');
 
         return array(
             'source' => 'Open-Meteo',
-            'updated_at' => isset($current['time']) ? $current['time'] : date('c'),
+            'updated_at' => $nowTime,
             'temperature_c' => $temperature,
             'wind_kmh' => $windSpeed,
             'gusts_kmh' => $windGusts,
@@ -51,12 +55,115 @@ class ExternalApiService {
             'precipitation_mm' => $precipitation,
             'weather_code' => $weatherCode,
             'condition' => $this->weatherCodeLabel($weatherCode),
+            'is_day' => $isDay,
             'daily' => array(
                 'max_c' => isset($daily['temperature_2m_max'][0]) ? (float) $daily['temperature_2m_max'][0] : null,
                 'min_c' => isset($daily['temperature_2m_min'][0]) ? (float) $daily['temperature_2m_min'][0] : null,
+                'rain_chance_pct' => isset($daily['precipitation_probability_max'][0]) ? (int) $daily['precipitation_probability_max'][0] : null,
+                'uv_index_max' => isset($daily['uv_index_max'][0]) ? (float) $daily['uv_index_max'][0] : null,
             ),
+            'hourly_forecast' => $this->extractHourlyForecast($hourly, $nowTime, 24),
+            'sun' => $this->extractSunInfo($daily, $nowTime),
             'lat' => (float) $latitude,
             'lon' => (float) $longitude,
+        );
+    }
+
+    /**
+     * Recorta el bloque "hourly" de Open-Meteo a las próximas $hours horas
+     * contando desde la hora actual local (según el timezone del punto).
+     */
+    private function extractHourlyForecast($hourly, $nowTime, $hours = 24) {
+        if (empty($hourly['time']) || !is_array($hourly['time'])) {
+            return array();
+        }
+
+        $times = $hourly['time'];
+        $startIndex = 0;
+        foreach ($times as $index => $time) {
+            if ($time >= substr($nowTime, 0, 13)) {
+                $startIndex = $index;
+                break;
+            }
+        }
+
+        $result = array();
+        $count = count($times);
+        for ($i = $startIndex; $i < min($startIndex + $hours, $count); $i++) {
+            $result[] = array(
+                'time' => $times[$i],
+                'hour_label' => $this->formatHourLabel($times[$i]),
+                'temperature_c' => isset($hourly['temperature_2m'][$i]) ? (float) $hourly['temperature_2m'][$i] : null,
+                'wind_kmh' => isset($hourly['wind_speed_10m'][$i]) ? round((float) $hourly['wind_speed_10m'][$i]) : null,
+                'gusts_kmh' => isset($hourly['wind_gusts_10m'][$i]) ? round((float) $hourly['wind_gusts_10m'][$i]) : null,
+                'rain_chance_pct' => isset($hourly['precipitation_probability'][$i]) ? (int) $hourly['precipitation_probability'][$i] : null,
+                'weather_code' => isset($hourly['weather_code'][$i]) ? (int) $hourly['weather_code'][$i] : null,
+            );
+        }
+
+        return $result;
+    }
+
+    private function formatHourLabel($isoTime) {
+        $ts = strtotime($isoTime);
+        if (!$ts) {
+            return $isoTime;
+        }
+        return date('G:i', $ts);
+    }
+
+    /**
+     * Calcula salida/puesta de sol, crepúsculo civil aproximado (±25 min)
+     * y el porcentaje de luz de día ya transcurrido, todo en hora local.
+     */
+    private function extractSunInfo($daily, $nowTime) {
+        $sunriseIso = isset($daily['sunrise'][0]) ? $daily['sunrise'][0] : null;
+        $sunsetIso = isset($daily['sunset'][0]) ? $daily['sunset'][0] : null;
+
+        if (!$sunriseIso || !$sunsetIso) {
+            return array(
+                'sunrise' => null,
+                'sunset' => null,
+                'dawn' => null,
+                'dusk' => null,
+                'daylight_label' => null,
+                'day_progress_pct' => null,
+                'is_daytime' => null,
+            );
+        }
+
+        $sunriseTs = strtotime($sunriseIso);
+        $sunsetTs = strtotime($sunsetIso);
+        $nowTs = strtotime($nowTime);
+        $twilightOffset = 25 * 60; // aproximación de crepúsculo civil
+
+        $daylightSeconds = max(0, $sunsetTs - $sunriseTs);
+        $hours = floor($daylightSeconds / 3600);
+        $minutes = floor(($daylightSeconds % 3600) / 60);
+
+        $progress = null;
+        $isDaytime = null;
+        if ($nowTs !== false) {
+            if ($nowTs <= $sunriseTs) {
+                $progress = 0;
+                $isDaytime = false;
+            } elseif ($nowTs >= $sunsetTs) {
+                $progress = 100;
+                $isDaytime = false;
+            } else {
+                $progress = round((($nowTs - $sunriseTs) / max(1, $daylightSeconds)) * 100);
+                $isDaytime = true;
+            }
+        }
+
+        return array(
+            'sunrise' => date('G:i', $sunriseTs),
+            'sunset' => date('G:i', $sunsetTs),
+            'dawn' => date('G:i', $sunriseTs - $twilightOffset),
+            'dusk' => date('G:i', $sunsetTs + $twilightOffset),
+            'daylight_label' => $hours . 'h ' . $minutes . 'm',
+            'day_progress_pct' => $progress,
+            'is_daytime' => $isDaytime,
         );
     }
 
@@ -254,9 +361,26 @@ class ExternalApiService {
     }
 
     private function riskFromType($type) {
-        $restricted = array('zona_restringida', 'zona_militar', 'area_protegida');
-        if (in_array($type, $restricted, true)) {
+        $normalized = strtolower(trim((string) $type));
+        $restricted = array(
+            'zona_restringida',
+            'zona_militar',
+            'area_protegida',
+            'protected_area',
+            'military',
+            'military_area',
+            'danger_area',
+            'no_fly',
+            'no_volar',
+            'zona_no_volar',
+            'restricted_zone'
+        );
+        if (in_array($normalized, $restricted, true)) {
             return 'restricted';
+        }
+        $advisory = array('aerodrome', 'aeropuerto', 'airport', 'airfield', 'helipad');
+        if (in_array($normalized, $advisory, true)) {
+            return 'advisory';
         }
         return 'advisory';
     }
@@ -323,9 +447,22 @@ class ExternalApiService {
             'precipitation_mm' => null,
             'weather_code' => null,
             'condition' => 'Sin datos',
+            'is_day' => null,
             'daily' => array(
                 'max_c' => null,
                 'min_c' => null,
+                'rain_chance_pct' => null,
+                'uv_index_max' => null,
+            ),
+            'hourly_forecast' => array(),
+            'sun' => array(
+                'sunrise' => null,
+                'sunset' => null,
+                'dawn' => null,
+                'dusk' => null,
+                'daylight_label' => null,
+                'day_progress_pct' => null,
+                'is_daytime' => null,
             ),
             'lat' => (float) $latitude,
             'lon' => (float) $longitude,

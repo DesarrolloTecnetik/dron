@@ -36,12 +36,26 @@
 	$externalApi = new ExternalApiService();
 	$externalWeather = $externalApi->weatherAt(DRONE_BASE_LAT, DRONE_BASE_LON);
 	$externalGeofences = $externalApi->geofencesAt(DRONE_BASE_LAT, DRONE_BASE_LON);
+	$externalLocation = $externalApi->reverseGeocodeAt(DRONE_BASE_LAT, DRONE_BASE_LON);
+
+	if (!empty($_GET['user']) || !empty($_GET['pass'])) {
+		// Nunca aceptamos credenciales en query-string. Si llegan, se descartan
+		// y se fuerza la navegación a la página de inicio sin exponer user/pass.
+		header('Location: ' . URL . '/inicio');
+		exit;
+	}
 
 	// acción solicitada -> nombre del archivo dentro de kernel/themes/
 	$action = !empty($_GET['action']) ? $_GET['action'] : 'inicio';
 
 	// solo letras, números, guiones -> evita path traversal
 	$action = preg_replace('/[^a-zA-Z0-9\-_]/', '', $action);
+
+	// /login se resuelve por la dashboard principal para desplegar
+	// el modal de acceso dentro del layout. No llevamos a una página aislada.
+	if ($action === 'login') {
+		$action = 'inicio';
+	}
 
 	$themeFile = PATH.'/kernel/themes/'.$action.'.php';
 
@@ -54,11 +68,18 @@
 	}
 
 	require PATH.'/kernel/tpl/head.tpl';
-	require PATH.'/kernel/tpl/body.tpl';
+
+	if( $action != 'login' ) {
+		require PATH.'/kernel/tpl/body.tpl';
+	}
 
 		if( $action == 'nofound' ) {
 
 			echo '<div class="win s12"><div class="win-body"><p class="desc">La página que buscas no existe.</p></div></div>';
+
+		} elseif ($action == 'login') {
+
+			require PATH.'/kernel/themes/login.php';
 
 		} else {
 
@@ -66,6 +87,8 @@
 
 		}
 
-	require PATH.'/kernel/tpl/footer.tpl';
+	if( $action != 'login' ) {
+		require PATH.'/kernel/tpl/footer.tpl';
+	}
 
 ?>
