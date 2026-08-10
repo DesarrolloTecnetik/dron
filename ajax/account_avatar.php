@@ -1,8 +1,6 @@
 <?php 
 
-	require '../init.conf';
-	$CR->ajaxToken();
-
+   require_once '../init.conf';
 	// vars
 	$image = !empty($_FILES['image']) ? $_FILES['image'] : null;
 	$errorImage = false;

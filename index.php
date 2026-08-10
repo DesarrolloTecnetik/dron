@@ -19,7 +19,23 @@
 	 * eso es esperado mientras se trabaja solo en el código/plantillas.
 	 */
 
-	require 'init.conf';
+	if (!defined('PATH')) {
+		define('PATH', realpath(__DIR__));
+	}
+
+	if (!defined('DRONE_BASE_LAT')) {
+		define('DRONE_BASE_LAT', 20.6736);
+	}
+	if (!defined('DRONE_BASE_LON')) {
+		define('DRONE_BASE_LON', -103.4059);
+	}
+
+	require_once 'init.conf';
+
+	require_once PATH.'/kernel/core/external_api.php';
+	$externalApi = new ExternalApiService();
+	$externalWeather = $externalApi->weatherAt(DRONE_BASE_LAT, DRONE_BASE_LON);
+	$externalGeofences = $externalApi->geofencesAt(DRONE_BASE_LAT, DRONE_BASE_LON);
 
 	// acción solicitada -> nombre del archivo dentro de kernel/themes/
 	$action = !empty($_GET['action']) ? $_GET['action'] : 'inicio';

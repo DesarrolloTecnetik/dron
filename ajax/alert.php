@@ -1,6 +1,6 @@
 <?php
       
-   require '../init.conf';
+   require_once '../init.conf';
    $CR->ajaxToken();
 
 	$message = !empty($_POST['m']) ? $_POST['m'] : null;

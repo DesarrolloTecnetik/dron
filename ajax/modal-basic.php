@@ -1,6 +1,6 @@
 <?php 
 
-	require '../init.conf';
+	require_once '../init.conf';
 
 	$image = !empty($_FILES['inputBacheo']) ? $_FILES['inputBacheo'] : null;
 	$auten = !empty($_POST['auten']) ? $_POST['auten'] : null;

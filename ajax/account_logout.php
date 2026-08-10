@@ -1,8 +1,6 @@
 <?php 
 
-   require '../init.conf';
-   $CR->ajaxToken();
-
+   require_once '../init.conf';
    // exist session (?)
    if( $UserID <= 0 ) {
 

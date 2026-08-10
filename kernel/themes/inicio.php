@@ -2,9 +2,20 @@
 	// ============================================================
 	// THEME: inicio  (dashboard principal de RADAR)
 	// Cargado por index.php entre body.tpl y footer.tpl
-	// Todos los valores son de ejemplo (placeholders) hasta que
-	// se conecte la base de datos — ver /database/schema.sql
+	// Los datos principales del dashboard se recogen de servicios
+	// externos: Open-Meteo (temperatura/viento/ráfagas) y Overpass
+	// (geocercas / áreas protegidas / aeródromos cercanos)
 	// ============================================================
+
+	$weather = isset($externalWeather) ? $externalWeather : null;
+	$geofences = isset($externalGeofences) ? $externalGeofences : null;
+	$windKmh = !empty($weather['wind_kmh']) ? round((float)$weather['wind_kmh']) : null;
+	$gustsKmh = !empty($weather['gusts_kmh']) ? round((float)$weather['gusts_kmh']) : null;
+	$tempC = !empty($weather['temperature_c']) ? round((float)$weather['temperature_c'], 1) : null;
+	$weatherCondition = !empty($weather['condition']) ? $weather['condition'] : 'Sin datos';
+	$visibilityKm = ($weather['visibility_km'] ?? 10);
+	$geofenceRisk = !empty($geofences['risk_level']) ? $geofences['risk_level'] : 'none';
+	$geoStatus = ($geofenceRisk === 'none') ? 'Sin restricciones' : strtoupper($geofenceRisk);
 ?>
 
 	<!-- ESTADO -->
@@ -16,15 +27,15 @@
 		<div class="win-body estado-body">
 			<div class="light-col">
 				<div class="light-ring"><div class="core"></div></div>
-				<div class="light-label">Puedes volar</div>
-				<div class="light-sub">Sin restricciones activas</div>
+				<div class="light-label"><?php echo ($geofenceRisk === 'none') ? 'Puedes volar' : 'Volar restringido'; ?></div>
+				<div class="light-sub"><?php echo $geoStatus; ?></div>
 			</div>
 			<div>
 				<div class="data-grid">
-					<div class="data-item"><div class="k">Viento</div><div class="v">14 <small>km/h</small></div></div>
-					<div class="data-item"><div class="k">Ráfagas</div><div class="v">22 <small>km/h</small></div></div>
-					<div class="data-item"><div class="k">Visibilidad</div><div class="v">10 <small>km</small></div></div>
-					<div class="data-item"><div class="k">Kp index</div><div class="v">2 <small>normal</small></div></div>
+					<div class="data-item"><div class="k">Viento</div><div class="v"><?php echo ($windKmh !== null) ? $windKmh : '--'; ?> <small>km/h</small></div></div>
+					<div class="data-item"><div class="k">Ráfagas</div><div class="v"><?php echo ($gustsKmh !== null) ? $gustsKmh : '--'; ?> <small>km/h</small></div></div>
+					<div class="data-item"><div class="k">Temperatura</div><div class="v"><?php echo ($tempC !== null) ? $tempC : '--'; ?> <small>°C</small></div></div>
+					<div class="data-item"><div class="k">Condición</div><div class="v"><?php echo htmlspecialchars($weatherCondition); ?></div></div>
 				</div>
 				<div class="row-between">
 					<div class="checklist-mini">
@@ -46,7 +57,16 @@
 		</div>
 		<div class="win-body">
 			<div class="map-frame"><div class="map-zone"></div><div class="map-pin"></div></div>
-			<p class="desc">Aeropuerto más cercano a 14 km. Sin zonas restringidas ni áreas protegidas en un radio de 5 km.</p>
+			<p class="loc-label" id="live-location-label">Ubicación: --</p>
+			<p class="desc">
+				<?php
+					if (!empty($geofences['near_geofences'])) {
+						echo 'Zonas cercanas detectadas: ' . count($geofences['near_geofences']) . ' · ' . htmlspecialchars($geofences['risk_level']);
+					} else {
+						echo 'Sin zonas restringidas ni áreas protegidas detectadas en un radio cercano.';
+					}
+				?>
+			</p>
 		</div>
 	</div>
 

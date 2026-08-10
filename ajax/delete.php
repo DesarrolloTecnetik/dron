@@ -1,6 +1,6 @@
 <?php 
 	
-	require '../init.conf';
+	require_once '../init.conf';
 	
 	// get vars
 	$action = !empty($_POST['action']) ? $_POST['action'] : null;
