@@ -301,80 +301,125 @@
 			);
 		}
 
-		(function setupLoginModal() {
-			const modal = document.getElementById('login-modal');
-			if (!modal) { return; }
-			const openButtons = document.querySelectorAll('[data-open-login]');
-			const closeButton = modal.querySelector('.modal-close');
-			const modalForm = document.getElementById('modal-login-form');
-			const openModal = () => {
-				modal.classList.add('is-open');
+		// ===== alerta() / button() =====
+		// Funciones globales que usan las respuestas PHP (updateJS) de
+		// ajax/account_start.php, ajax/account_signup.php, ajax/account_logout.php, etc.
+		// para mostrar mensajes al usuario y reactivar el botón del formulario.
+		window.__activeAuthButton = null;
+
+		function alerta(message, type, time) {
+			type = type || 'info';
+			let stack = document.querySelector('.sbalerts');
+			if (!stack) {
+				stack = document.createElement('div');
+				stack.className = 'sbalerts';
+				document.body.appendChild(stack);
+			}
+			const toast = document.createElement('div');
+			toast.className = 'radar-toast ' + type;
+			toast.textContent = message;
+			stack.appendChild(toast);
+			requestAnimationFrame(() => toast.classList.add('is-visible'));
+			const life = (typeof time === 'number' && time > 0) ? time : 4500;
+			setTimeout(() => {
+				toast.classList.remove('is-visible');
+				setTimeout(() => toast.remove(), 300);
+			}, life);
+		}
+
+		function button(enable) {
+			if (window.__activeAuthButton) {
+				window.__activeAuthButton.disabled = !enable;
+			}
+		}
+
+		// ===== Modales de acceso (login / registro) =====
+		(function setupAuthModals() {
+			const modals = {
+				login: document.getElementById('login-modal'),
+				register: document.getElementById('register-modal')
 			};
-			const closeModal = () => {
-				modal.classList.remove('is-open');
+
+			const openModal = (name) => {
+				Object.values(modals).forEach(m => { if (m) { m.classList.remove('is-open'); } });
+				if (modals[name]) { modals[name].classList.add('is-open'); }
 			};
-			openButtons.forEach(btn => btn.addEventListener('click', event => {
+			const closeModal = (name) => {
+				if (modals[name]) { modals[name].classList.remove('is-open'); }
+			};
+
+			document.querySelectorAll('[data-open-login]').forEach(btn => btn.addEventListener('click', event => {
 				event.preventDefault();
-				openModal();
+				openModal('login');
 			}));
-			if (closeButton) { closeButton.addEventListener('click', closeModal); }
-			modal.addEventListener('click', event => {
-				if (event.target === modal) { closeModal(); }
+			document.querySelectorAll('[data-open-register]').forEach(btn => btn.addEventListener('click', event => {
+				event.preventDefault();
+				openModal('register');
+			}));
+
+			Object.entries(modals).forEach(([name, modal]) => {
+				if (!modal) { return; }
+				const closeButton = modal.querySelector('.modal-close');
+				if (closeButton) { closeButton.addEventListener('click', () => closeModal(name)); }
+				modal.addEventListener('click', event => {
+					if (event.target === modal) { closeModal(name); }
+				});
 			});
-			if (modalForm) {
-				modalForm.addEventListener('submit', event => {
+
+			// envío genérico por fetch de un formulario dentro de un modal de auth
+			function wireAuthForm(formId, buttonId, endpoint, busyLabel, idleLabel, messageId) {
+				const form = document.getElementById(formId);
+				if (!form) { return; }
+				form.addEventListener('submit', event => {
 					event.preventDefault();
-					const formData = new FormData(modalForm);
-					const button = document.getElementById('modal-login-button');
+					const formData = new FormData(form);
+					const button = document.getElementById(buttonId);
+					window.__activeAuthButton = button;
 					if (button) {
 						button.disabled = true;
-						button.textContent = 'Conectando...';
+						button.textContent = busyLabel;
 					}
-					fetch('<?php echo URL; ?>/ajax/account_start.php', {
+					fetch('<?php echo URL; ?>' + endpoint, {
 						method: 'POST',
-						headers: {
-							'X-Requested-With': 'XMLHttpRequest'
-						},
+						headers: { 'X-Requested-With': 'XMLHttpRequest' },
 						body: formData
 					})
 					.then(response => {
-						if (!response.ok) {
-							throw new Error('Login endpoint returned ' + response.status);
-						}
+						if (!response.ok) { throw new Error(endpoint + ' returned ' + response.status); }
 						return response.text();
 					})
 					.then(text => {
-						const message = document.getElementById('modal-login-message');
-						if (message) {
-							message.innerHTML = text;
-						}
+						const message = document.getElementById(messageId);
+						if (message) { message.innerHTML = ''; }
 						const scripts = text.match(/<script[^>]*>([\s\S]*?)<\/script>/gi) || [];
 						for (const scriptTag of scripts) {
 							const inner = scriptTag.match(/<script[^>]*>([\s\S]*?)<\/script>/i);
-							if (inner && inner[1]) {
-								eval(inner[1]);
-							}
+							if (inner && inner[1]) { eval(inner[1]); }
 						}
 					})
 					.catch(error => {
-						console.log('Login modal error:', error);
-						const message = document.getElementById('modal-login-message');
-						if (message) {
-							message.innerHTML = '<div class="login-error">No se pudo contactar con el servicio de autenticación.</div>';
-						}
+						console.log('Auth form error:', error);
+						alerta('No se pudo contactar con el servidor, intenta nuevamente.', 'danger');
 					})
 					.finally(() => {
-						if (button) {
-							button.disabled = false;
-							button.textContent = 'Entrar';
-						}
+						// si el botón sigue deshabilitado es porque hubo un redirect exitoso (button(true) no se llamó);
+						// lo dejamos así hasta que la página cambie. Si se reactivó, restauramos su texto.
+						if (button && !button.disabled) { button.textContent = idleLabel; }
 					});
 				});
 			}
+
+			wireAuthForm('modal-login-form', 'modal-login-button', '/ajax/account_start.php', 'Conectando...', 'Entrar', 'modal-login-message');
+			wireAuthForm('modal-register-form', 'modal-register-button', '/ajax/account_signup.php', 'Creando cuenta...', 'Crear cuenta', 'modal-register-message');
+
 			<?php if (empty($UserID)) : ?>
-				openModal();
+				openModal('login');
 			<?php endif; ?>
 		})();
+
+		<?php if (!empty($_GET['logout'])) : ?>
+			alerta('Sesión cerrada correctamente.', 'success');
+		<?php endif; ?>
 
 		startLivePositioning();
 	</script>

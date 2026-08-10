@@ -1,27 +1,24 @@
-<?php 
+<?php
 
    require_once '../init.conf';
-   // exist session (?)
-   if( $UserID <= 0 ) {
 
-      // check sessions expired
-      $User->session(0);
-      echo $CR->updateJS(' alerta("success message logout", "success"); ').$CR->refresh(2, URL.'/redirect');
+   // solo hacemos trabajo de cierre de sesión si en verdad había una sesión activa
+   if( $UserID >= 1 ) {
 
-   } else {
+      // log de la acción
+      $CR->logs('Cierre de sesión', 'El usuario cerró sesión manualmente.', $UserID, $serverID);
 
-      // add log
-      $CR->logs('log title', 'log message descrip.', $UserID, $serverID);
-      // continue delete log in DB
-      $session_search = $db->query("DELETE FROM login_temp WHERE userid = :account");
-      $db->bind(':account', $UserID);
-      $db->execute(); $db->CloseConnection();
-      // delete statusd
-      $CR->updateData("login", "statusd", "0", "userid", $UserID);
-      // session destroys
-      $session->destroy($UserID); unset($_SESSION['id']); @session_destroy();
-      echo $CR->updateJS(' alerta("success message logout", "success"); ').$CR->refresh(2, URL.'/redirect');
+      // elimina los tokens de sesión (login_temp) y marca isonline = 0
+      $session->destroy($UserID);
 
    }
+
+   // limpiar sesión PHP de todas formas (por si acaso quedó algo colgado)
+   unset($_SESSION['id']);
+   @session_destroy();
+
+   // redirección directa; el toast "Sesión cerrada" se dispara en inicio.php vía ?logout=1
+   header('Location: ' . URL . '/inicio?logout=1');
+   exit;
 
 ?>
