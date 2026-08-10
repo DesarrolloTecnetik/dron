@@ -1,0 +1,22 @@
+Options -MultiViews
+Options -Indexes
+Options +FollowSymlinks
+RewriteEngine On 
+
+<IfModule mod_rewrite.c>
+
+	#RewriteCond %{HTTPS} off 
+	#RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+	RewriteCond %{REQUEST_FILENAME} !-f
+	RewriteCond %{REQUEST_FILENAME} !-d
+
+</IfModule>
+
+# BEGIN USER REWRITES SB
+
+RewriteRule ^inicio/(.*)$ index.php?action=$1 [L]
+RewriteRule ^inicio index.php
+
+RewriteRule ^oops/(.*)$ nofound.php?action=$1 [L]
+RewriteRule ^oops nofound.php
