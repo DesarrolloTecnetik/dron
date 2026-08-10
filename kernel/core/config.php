@@ -23,7 +23,7 @@
 		// pass phpmyadmin	
 		define("DB_PASS",	"");						
 		// database name 
-		define("DB_NAME", "database");			
+		define("DB_NAME", "drone");			
 		// format of codification of characters UNICODE and ISO
 		define('DB_CHARSET', "SET NAME utf8");		
 		// type database in phpmyadmin
