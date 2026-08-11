@@ -1,13 +1,15 @@
 <?php
 	// $action, $UserID, $User, $avatarUser vienen ya definidos por init.conf / index.php
+	// slugs que ya son páginas propias (kernel/themes/{slug}.php) vs. anclas
+	// a una ventana ("win-{slug}") dentro del dashboard /inicio.
 	$dockItems = array(
-		'inicio'     => 'Inicio',
-		'galeria'    => 'Galería',
-		'clima'      => 'Clima',
-		'geocercas'  => 'GeoCercas',
-		'bitacora'   => 'Bitácora',
-		'noticias'   => 'Noticias',
-		'equipo'     => 'Equipo',
+		'inicio'     => array('label' => 'Inicio', 'href' => URL.'/inicio'),
+		'galeria'    => array('label' => 'Galería', 'href' => URL.'/inicio/galeria'),
+		'clima'      => array('label' => 'Clima', 'href' => URL.'/inicio#win-clima'),
+		'geocercas'  => array('label' => 'GeoCercas', 'href' => URL.'/inicio#win-geocercas'),
+		'bitacora'   => array('label' => 'Bitácora', 'href' => URL.'/inicio/bitacora'),
+		'noticias'   => array('label' => 'Noticias', 'href' => URL.'/inicio/noticias'),
+		'equipo'     => array('label' => 'Equipo', 'href' => URL.'/inicio/equipo'),
 	);
 	$pilotUser = ($UserID >= 1) ? $User->user($UserID, 'user') : null;
 ?>
@@ -19,8 +21,8 @@
 	</div>
 
 	<div class="dock">
-		<?php foreach( $dockItems as $slug => $label ) { ?>
-			<a href="<?php echo URL ?>/inicio/<?php echo $slug ?>" class="<?php echo ($action == $slug) ? 'is-active' : '' ?>"><?php echo $label ?></a>
+		<?php foreach( $dockItems as $slug => $item ) { ?>
+			<a href="<?php echo $item['href'] ?>" class="<?php echo ($action == $slug) ? 'is-active' : '' ?>"><?php echo $item['label'] ?></a>
 		<?php } ?>
 	</div>
 

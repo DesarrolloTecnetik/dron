@@ -72,16 +72,118 @@
 		</div>
 	</div>
 
-	<!-- ACCESOS RÁPIDOS -->
-	<div class="win s4">
-		<div class="win-bar"><div class="win-bar-left"><div class="win-dots"><span></span><span></span><span></span></div><div class="win-title">Galería en mapa</div></div></div>
+	<!-- GEOCERCAS -->
+	<div class="win s12" id="win-geocercas">
+		<div class="win-bar">
+			<div class="win-bar-left"><div class="win-dots"><span></span><span></span><span></span></div><div class="win-title">GeoCercas · Semáforo de vuelo</div></div>
+			<div class="win-status <?php echo $statusZona ?>" id="geo-status-badge"><?php echo $statusLabel ?></div>
+		</div>
 		<div class="win-body">
-			<p class="desc">Explora fotos y videos compartidos por sitio de interés, y revisa el Top de la comunidad.</p>
-			<a href="<?php echo URL ?>/inicio/galeria" class="btn accent" style="margin-top:14px;">Ver galería</a>
+			<div class="geo-body">
+				<div class="geo-map-col">
+					<div id="geo-map" class="geo-map"></div>
+				</div>
+				<div class="geo-side-col">
+					<div class="geo-legend">
+						<div class="geo-legend-item"><span class="geo-dot green"></span> Verde · sin restricción cercana</div>
+						<div class="geo-legend-item"><span class="geo-dot amber"></span> Precaución · zona cerca</div>
+						<div class="geo-legend-item"><span class="geo-dot red"></span> Restringida · dentro del radio</div>
+					</div>
+					<div class="geo-zone-list">
+						<?php if( $geoOK && !empty($externalGeofences['near']) ) { ?>
+							<?php foreach( $externalGeofences['near'] as $zona ) { ?>
+								<?php
+									$dotClass = ($zona['riesgo'] == 'restringida') ? 'red' : (($zona['riesgo'] == 'precaucion') ? 'amber' : 'green');
+								?>
+								<div class="geo-zone-row">
+									<span class="geo-dot <?php echo $dotClass ?>"></span>
+									<div>
+										<div class="geo-zone-name"><?php echo htmlspecialchars($zona['nombre']) ?></div>
+										<div class="geo-zone-meta"><?php echo ucfirst($zona['tipo']) ?> · <?php echo $zona['distancia_km'] ?> km</div>
+									</div>
+								</div>
+							<?php } ?>
+						<?php } else { ?>
+							<p class="geo-zone-empty" id="geo-zone-empty">No hay geocercas activas cerca de tu ubicación.</p>
+						<?php } ?>
+					</div>
+				</div>
+			</div>
 		</div>
 	</div>
 
-	<div class="win s4">
+	<!-- CLIMA DETALLADO -->
+	<div class="win s12" id="win-clima">
+		<div class="win-bar">
+			<div class="win-bar-left"><div class="win-dots"><span></span><span></span><span></span></div><div class="win-title">Clima · viento y puesta de sol</div></div>
+		</div>
+		<div class="win-body">
+
+			<?php if( $climaOK ) { ?>
+				<div class="chart-grid">
+					<div class="chart-col">
+						<div class="chart-head">
+							<span class="chart-label">Probabilidad de lluvia</span>
+							<span class="chart-value" id="rain-now"><?php echo !empty($externalWeather['hourly']['lluvia_pct'][0]) ? $externalWeather['hourly']['lluvia_pct'][0].'%' : '--'; ?> <small>ahora</small></span>
+						</div>
+						<div class="chart-frame">
+							<canvas id="chart-rain" height="170"></canvas>
+							<p class="chart-empty" id="chart-rain-empty" style="display:none;">No se pudieron cargar los datos de lluvia por hora.</p>
+						</div>
+					</div>
+					<div class="chart-col">
+						<div class="chart-head">
+							<span class="chart-label">Viento y ráfagas</span>
+							<span class="chart-value" id="wind-now"><?php echo $externalWeather['rafagas_kmh'] ?> <small>km/h ráfaga actual</small></span>
+						</div>
+						<div class="chart-frame">
+							<canvas id="chart-wind" height="170"></canvas>
+							<p class="chart-empty" id="chart-wind-empty" style="display:none;">No se pudieron cargar los datos de viento por hora.</p>
+						</div>
+					</div>
+				</div>
+
+				<?php if( !empty($externalWeather['sun']) && $externalWeather['sun']['amanecer'] ) { $sun = $externalWeather['sun']; ?>
+					<div class="sun-track">
+						<div class="chart-head">
+							<span class="chart-label">Ciclo solar</span>
+							<span class="chart-value"><?php echo $sun['duracion_label'] ?> <small>de luz hoy</small></span>
+						</div>
+						<div class="sun-bar">
+							<div class="sun-bar-fill" style="width:<?php echo $sun['progreso_pct'] ?>%;"></div>
+							<div class="sun-marker" style="left:<?php echo $sun['progreso_pct'] ?>%;">
+								<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/></svg>
+							</div>
+						</div>
+						<div class="sun-grid">
+							<div class="data-item"><div class="k">Amanecer</div><div class="v" style="font-size:15px;"><?php echo $sun['amanecer'] ?></div></div>
+							<div class="data-item"><div class="k">Atardecer</div><div class="v" style="font-size:15px;"><?php echo $sun['atardecer'] ?></div></div>
+							<div class="data-item"><div class="k">Crepúsculo AM</div><div class="v" style="font-size:15px;"><?php echo $sun['crepusculo_manana'] ?></div></div>
+							<div class="data-item"><div class="k">Crepúsculo PM</div><div class="v" style="font-size:15px;"><?php echo $sun['crepusculo_tarde'] ?></div></div>
+						</div>
+					</div>
+				<?php } ?>
+			<?php } else { ?>
+				<p class="desc">No se pudo consultar el clima en este momento. Intenta recargar en unos segundos.</p>
+			<?php } ?>
+
+		</div>
+	</div>
+
+	<!-- GALERÍA EN MAPA -->
+	<div class="win s12" id="win-galeria">
+		<div class="win-bar">
+			<div class="win-bar-left"><div class="win-dots"><span></span><span></span><span></span></div><div class="win-title">Galería en mapa</div></div>
+		</div>
+		<div class="win-body">
+			<p class="desc" style="margin-bottom:14px;">Publicaciones recientes de la comunidad, ubicadas por sitio de interés.</p>
+			<div id="gal-map" class="gal-map"></div>
+			<a href="<?php echo URL ?>/inicio/galeria" class="btn accent" style="margin-top:14px;">Ver galería completa</a>
+		</div>
+	</div>
+
+	<!-- ACCESOS RÁPIDOS -->
+	<div class="win s6">
 		<div class="win-bar"><div class="win-bar-left"><div class="win-dots"><span></span><span></span><span></span></div><div class="win-title">Bitácora</div></div></div>
 		<div class="win-body">
 			<p class="desc">Registra tus vuelos con ubicación, duración y condiciones al momento de volar.</p>
@@ -89,7 +191,7 @@
 		</div>
 	</div>
 
-	<div class="win s4">
+	<div class="win s6">
 		<div class="win-bar"><div class="win-bar-left"><div class="win-dots"><span></span><span></span><span></span></div><div class="win-title">Noticias</div></div></div>
 		<div class="win-body">
 			<p class="desc">Actualizaciones de AFAC, fabricantes y la industria, filtradas para droneros en México.</p>
@@ -98,3 +200,14 @@
 	</div>
 
 </div>
+
+<script>
+	window.__radarGeo = <?php echo json_encode(array(
+		'lat' => DRONE_BASE_LAT,
+		'lon' => DRONE_BASE_LON,
+		'near' => $geoOK && !empty($externalGeofences['near']) ? $externalGeofences['near'] : array(),
+	)); ?>;
+	window.__radarClima = <?php echo json_encode(array(
+		'hourly' => $climaOK && !empty($externalWeather['hourly']) ? $externalWeather['hourly'] : array('labels' => array(), 'lluvia_pct' => array(), 'viento_kmh' => array(), 'rafagas_kmh' => array()),
+	)); ?>;
+</script>

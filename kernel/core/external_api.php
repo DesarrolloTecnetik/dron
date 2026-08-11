@@ -51,7 +51,9 @@
 			$url = "https://api.open-meteo.com/v1/forecast"
 				 . "?latitude=".$lat."&longitude=".$lon
 				 . "&current=temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,visibility,weather_code"
-				 . "&timezone=auto";
+				 . "&hourly=wind_speed_10m,wind_gusts_10m,precipitation_probability"
+				 . "&daily=sunrise,sunset,precipitation_probability_max"
+				 . "&timezone=auto&forecast_days=2";
 
 			$data = $this->curlGet($url);
 
@@ -75,6 +77,82 @@
 				'temperatura_c' => isset($c['temperature_2m']) ? $c['temperature_2m'] : null,
 				'visibilidad_m' => isset($c['visibility']) ? $c['visibility'] : null,
 				'actualizado' => isset($c['time']) ? $c['time'] : null,
+				'hourly' => $this->extractHourly(!empty($data['hourly']) ? $data['hourly'] : array(), isset($c['time']) ? $c['time'] : date('c')),
+				'sun' => $this->extractSun(!empty($data['daily']) ? $data['daily'] : array(), isset($c['time']) ? $c['time'] : date('c')),
+			);
+
+		}
+
+		// -----------------------------------------------------------
+		// Recorta el bloque "hourly" de Open-Meteo a las próximas 12 horas
+		// contando desde la hora actual local, para alimentar las gráficas.
+		// -----------------------------------------------------------
+		private function extractHourly($hourly, $nowTime) {
+
+			if( empty($hourly['time']) || !is_array($hourly['time']) ) { return array('labels' => array(), 'lluvia_pct' => array(), 'viento_kmh' => array(), 'rafagas_kmh' => array()); }
+
+			$times = $hourly['time'];
+			$startIndex = 0;
+
+			foreach( $times as $index => $time ) {
+				if( $time >= substr($nowTime, 0, 13) ) { $startIndex = $index; break; }
+			}
+
+			$labels = array(); $lluvia = array(); $viento = array(); $rafagas = array();
+			$count = count($times);
+
+			for( $i = $startIndex; $i < min($startIndex + 12, $count); $i++ ) {
+
+				$ts = strtotime($times[$i]);
+				$labels[] = $ts ? date('G:i', $ts) : $times[$i];
+				$lluvia[] = isset($hourly['precipitation_probability'][$i]) ? (int) $hourly['precipitation_probability'][$i] : 0;
+				$viento[] = isset($hourly['wind_speed_10m'][$i]) ? round($hourly['wind_speed_10m'][$i]) : 0;
+				$rafagas[] = isset($hourly['wind_gusts_10m'][$i]) ? round($hourly['wind_gusts_10m'][$i]) : 0;
+
+			}
+
+			return array('labels' => $labels, 'lluvia_pct' => $lluvia, 'viento_kmh' => $viento, 'rafagas_kmh' => $rafagas);
+
+		}
+
+		// -----------------------------------------------------------
+		// Calcula amanecer/atardecer, crepúsculo aproximado (±25 min)
+		// y el % del día ya transcurrido, en hora local.
+		// -----------------------------------------------------------
+		private function extractSun($daily, $nowTime) {
+
+			$sunriseIso = isset($daily['sunrise'][0]) ? $daily['sunrise'][0] : null;
+			$sunsetIso = isset($daily['sunset'][0]) ? $daily['sunset'][0] : null;
+
+			if( !$sunriseIso || !$sunsetIso ) {
+				return array('amanecer' => null, 'atardecer' => null, 'crepusculo_manana' => null, 'crepusculo_tarde' => null, 'duracion_label' => null, 'progreso_pct' => null, 'es_de_dia' => null);
+			}
+
+			$sunriseTs = strtotime($sunriseIso);
+			$sunsetTs = strtotime($sunsetIso);
+			$nowTs = strtotime($nowTime);
+			$offset = 25 * 60;
+
+			$daylightSeconds = max(0, $sunsetTs - $sunriseTs);
+			$hours = floor($daylightSeconds / 3600);
+			$minutes = floor(($daylightSeconds % 3600) / 60);
+
+			$progreso = 0; $esDeDia = false;
+
+			if( $nowTs !== false ) {
+				if( $nowTs <= $sunriseTs ) { $progreso = 0; $esDeDia = false; }
+				elseif( $nowTs >= $sunsetTs ) { $progreso = 100; $esDeDia = false; }
+				else { $progreso = round((($nowTs - $sunriseTs) / max(1, $daylightSeconds)) * 100); $esDeDia = true; }
+			}
+
+			return array(
+				'amanecer' => date('G:i', $sunriseTs),
+				'atardecer' => date('G:i', $sunsetTs),
+				'crepusculo_manana' => date('G:i', $sunriseTs - $offset),
+				'crepusculo_tarde' => date('G:i', $sunsetTs + $offset),
+				'duracion_label' => $hours.'h '.$minutes.'m',
+				'progreso_pct' => $progreso,
+				'es_de_dia' => $esDeDia,
 			);
 
 		}
@@ -86,35 +164,91 @@
 		// -----------------------------------------------------------
 		public function geofencesAt($lat, $lon) {
 
-			// aeropuertos conocidos cerca de Jalisco -> ir agregando conforme se necesite
-			$aeropuertos = array(
-				array('nombre' => 'Aeropuerto Internacional de Guadalajara (GDL)', 'lat' => 20.5218, 'lon' => -103.3111, 'radio_km' => 9),
+			// aeropuertos/zonas conocidas cerca de Jalisco -> ir agregando conforme se necesite
+			$conocidas = array(
+				array('nombre' => 'Aeropuerto Internacional de Guadalajara (GDL)', 'tipo' => 'aeropuerto', 'lat' => 20.5218, 'lon' => -103.3111, 'radio_km' => 9),
 			);
+
+			// si existe la tabla `geocercas` en BD, se agregan también esas zonas
+			$conocidas = array_merge($conocidas, $this->geocercasDesdeBD());
 
 			$masCercano = null;
 			$distanciaMin = null;
+			$cercanas = array();
 
-			foreach( $aeropuertos as $a ) {
+			foreach( $conocidas as $z ) {
 
-				$d = $this->haversine($lat, $lon, $a['lat'], $a['lon']);
+				$d = $this->haversine($lat, $lon, $z['lat'], $z['lon']);
+				$radio = !empty($z['radio_km']) ? $z['radio_km'] : 5;
+
 				if( $distanciaMin === null || $d < $distanciaMin ) {
-
 					$distanciaMin = $d;
-					$masCercano = $a;
+					$masCercano = $z;
+				}
+
+				// solo se listan las zonas relevantes para el mapa (radio ampliado x4 para dar contexto visual)
+				if( $d <= ($radio * 4) ) {
+
+					$cercanas[] = array(
+						'nombre' => $z['nombre'],
+						'tipo' => $z['tipo'],
+						'lat' => $z['lat'],
+						'lon' => $z['lon'],
+						'radio_km' => $radio,
+						'distancia_km' => round($d, 1),
+						'riesgo' => ($d <= $radio) ? 'restringida' : (($d <= $radio * 2) ? 'precaucion' : 'informativa'),
+					);
 
 				}
 
 			}
 
-			$restringido = ($distanciaMin !== null && $distanciaMin <= $masCercano['radio_km']);
+			usort($cercanas, function($a, $b) { return $a['distancia_km'] <=> $b['distancia_km']; });
+
+			$restringido = ($distanciaMin !== null && $masCercano && $distanciaMin <= $masCercano['radio_km']);
 
 			return array(
 				'ok' => true,
 				'zona' => $restringido ? 'restringida' : 'verde',
 				'aeropuerto_cercano' => $masCercano ? $masCercano['nombre'] : null,
 				'distancia_km' => $distanciaMin !== null ? round($distanciaMin, 1) : null,
-				'nota' => 'Cálculo aproximado por radio de aeropuerto. Falta integrar el KML oficial de AFAC para zonas urbanas, arqueológicas y áreas protegidas.'
+				'nota' => 'Cálculo aproximado por radio de zonas conocidas. Falta integrar el KML oficial de AFAC para cobertura completa.',
+				'near' => $cercanas,
 			);
+
+		}
+
+		// -----------------------------------------------------------
+		// Lee zonas adicionales desde la tabla `geocercas` si existe.
+		// Falla en silencio (tabla ausente, sin BD, etc.) -> lista vacía.
+		// -----------------------------------------------------------
+		private function geocercasDesdeBD() {
+
+			if( !isset($GLOBALS['db']) || !method_exists($GLOBALS['db'], 'query') ) { return array(); }
+
+			try {
+
+				$db = $GLOBALS['db'];
+				$db->query("SELECT nombre, tipo, lat, lon, radio_m FROM geocercas WHERE activo = 1");
+				$db->execute();
+				$rows = $db->resultSet();
+
+			} catch( Exception $e ) { return array(); }
+
+			$out = array();
+			foreach( (array) $rows as $r ) {
+
+				$out[] = array(
+					'nombre' => $r['nombre'],
+					'tipo' => !empty($r['tipo']) ? $r['tipo'] : 'zona',
+					'lat' => (float) $r['lat'],
+					'lon' => (float) $r['lon'],
+					'radio_km' => !empty($r['radio_m']) ? round($r['radio_m'] / 1000, 2) : 1,
+				);
+
+			}
+
+			return $out;
 
 		}
 

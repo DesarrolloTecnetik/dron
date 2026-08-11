@@ -6,6 +6,7 @@
 	<title><?php echo isset($pageTitle) ? $pageTitle : TITLE ?></title>
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 	<style>
 		:root{
 			--desk:#F3F4F6; --win:#FFFFFF; --border:#E5E7EB; --border-strong:#D6D9DE;
@@ -82,6 +83,46 @@
 		.btn{ font-family:var(--sans); font-weight:600; font-size:13px; color:#fff; background:var(--ink); border:none; border-radius:7px; padding:10px 18px; cursor:pointer; display:inline-flex; align-items:center; gap:7px; }
 		.btn.accent{ background:var(--accent); }
 
+		/* ===== CLIMA · GRÁFICAS ===== */
+		.chart-grid{ display:grid; grid-template-columns:1fr 1fr; gap:28px; }
+		.chart-col{ min-width:0; }
+		.chart-head{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px; }
+		.chart-label{ font-size:12.5px; font-weight:500; color:var(--ink); }
+		.chart-value{ font-family:var(--grot); font-size:15px; font-weight:600; color:var(--ink); }
+		.chart-value small{ font-family:var(--sans); font-size:11px; color:var(--ink-faint); font-weight:400; }
+		.chart-frame{ height:170px; position:relative; }
+		.chart-empty{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:80%; text-align:center; font-size:12px; color:var(--ink-faint); line-height:1.5; }
+
+		/* ===== CICLO SOLAR ===== */
+		.sun-track{ margin-top:26px; padding-top:22px; border-top:1px solid var(--border); }
+		.sun-bar{ position:relative; height:8px; border-radius:100px; background:linear-gradient(90deg, #E7E9EC 0%, #E7E9EC 100%); overflow:visible; margin:26px 0 18px; }
+		.sun-bar-fill{ position:absolute; top:0; left:0; height:100%; border-radius:100px; background:linear-gradient(90deg, #FFD27A 0%, var(--accent) 100%); transition:width 0.4s ease; }
+		.sun-marker{ position:absolute; top:50%; width:20px; height:20px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 4px var(--accent-soft), 0 2px 6px rgba(20,23,26,0.18); transform:translate(-50%,-50%); transition:left 0.4s ease; }
+		.sun-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:0; }
+		.sun-grid .data-item{ padding:0 18px; border-left:1px solid var(--border); }
+		.sun-grid .data-item:first-child{ padding-left:0; border-left:none; }
+
+		/* ===== GEOCERCAS / MAPA ===== */
+		.geo-body{ display:grid; grid-template-columns:1.5fr 1fr; gap:24px; align-items:start; }
+		.geo-map{ height:340px; border-radius:8px; border:1px solid var(--border); background:#EDEFF1; position:relative; z-index:0; }
+		.geo-legend{ display:flex; flex-direction:column; gap:9px; margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid var(--border); }
+		.geo-legend-item{ display:flex; align-items:center; gap:9px; font-size:12.5px; color:var(--ink-dim); }
+		.geo-dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+		.geo-dot.green{ background:var(--green); box-shadow:0 0 0 3px var(--green-soft); }
+		.geo-dot.amber{ background:var(--amber); box-shadow:0 0 0 3px var(--amber-soft); }
+		.geo-dot.red{ background:var(--red); box-shadow:0 0 0 3px var(--red-soft); }
+		.geo-zone-list{ margin-top:2px; display:flex; flex-direction:column; gap:2px; max-height:260px; overflow-y:auto; }
+		.geo-zone-row{ display:flex; align-items:flex-start; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
+		.geo-zone-row:last-child{ border-bottom:none; }
+		.geo-zone-row .geo-dot{ margin-top:5px; }
+		.geo-zone-name{ font-size:13px; font-weight:500; }
+		.geo-zone-meta{ font-size:11.5px; color:var(--ink-faint); margin-top:2px; }
+		.geo-zone-empty{ font-size:12.5px; color:var(--ink-faint); padding:6px 0; }
+		.geo-map .leaflet-control-attribution{ font-size:9.5px; background:rgba(255,255,255,0.75); }
+
+		/* ===== GALERÍA · MINI MAPA ===== */
+		.gal-map{ height:300px; border-radius:8px; border:1px solid var(--border); background:#EDEFF1; }
+
 		@media (max-width:880px){
 			.topbar{ flex-wrap:wrap; gap:12px; padding:14px 20px; }
 			.dock{ order:3; width:100%; }
@@ -89,8 +130,16 @@
 			.s12,.s7,.s5,.s6,.s4,.s8{ grid-column:span 1; }
 			.data-grid{ grid-template-columns:repeat(2,1fr); row-gap:16px; }
 			.data-item{ border-left:none; padding-left:0; }
+			.chart-grid{ grid-template-columns:1fr; gap:26px; }
+			.sun-grid{ grid-template-columns:repeat(2,1fr); row-gap:16px; }
+			.sun-grid .data-item{ border-left:none; padding-left:0; }
+			.geo-body{ grid-template-columns:1fr; }
+			.geo-map{ height:260px; }
 		}
 	</style>
+	<script src="<?php echo URL ?>/assets/js/chart.umd.min.js"></script>
+	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+	<script src="https://maps.googleapis.com/maps/api/js?key=<?php echo GOOGLEAPI ?>&libraries=places" defer async></script>
 </head>
 <body>
 
