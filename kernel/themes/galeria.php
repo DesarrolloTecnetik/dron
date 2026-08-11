@@ -72,6 +72,34 @@
 	.rd-fab{ position:fixed; bottom:26px; right:26px; background:var(--rd-accent); color:#fff; border:none; border-radius:100px;
 		padding:13px 20px; font-weight:600; font-size:13.5px; cursor:pointer; box-shadow:0 10px 24px -8px rgba(255,90,41,.5); z-index:40; }
 
+	/* imagen/video que no cargó */
+	.rd-noimg{ width:100%; height:100%; display:flex; align-items:center; justify-content:center;
+		background:var(--rd-bg); color:var(--rd-faint); font-size:11px; text-align:center; padding:6px; }
+
+	/* modal detalle / comentarios */
+	.rd-det-media{ width:100%; max-height:320px; min-height:120px; border-radius:9px; overflow:hidden; background:#000; }
+	.rd-det-media img, .rd-det-media video{ width:100%; max-height:320px; object-fit:contain; display:block; margin:0 auto; }
+	.rd-det-autor{ display:flex; align-items:center; gap:9px; }
+	.rd-det-avatar{ width:32px; height:32px; border-radius:50%; object-fit:cover; background:var(--rd-bg); flex-shrink:0; }
+	.rd-det-autor-name{ font-size:12.5px; font-weight:600; }
+	.rd-det-autor-meta{ font-size:11px; color:var(--rd-faint); }
+	.rd-det-like{ display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13px; font-weight:600;
+		color:var(--rd-dim); border:1px solid var(--rd-border); border-radius:100px; padding:7px 14px; width:fit-content; }
+	.rd-det-like.is-active{ color:var(--rd-accent); border-color:var(--rd-accent-soft); background:var(--rd-accent-soft); }
+	.rd-det-desc{ font-size:12.5px; color:var(--rd-dim); line-height:1.5; white-space:pre-wrap; }
+	.rd-comentarios h4{ font-size:12.5px; font-weight:600; margin-bottom:2px; }
+	.rd-comment-item{ display:flex; gap:8px; padding:8px 0; border-bottom:1px solid var(--rd-border); }
+	.rd-comment-item:last-child{ border-bottom:none; }
+	.rd-comment-avatar{ width:24px; height:24px; border-radius:50%; object-fit:cover; background:var(--rd-bg); flex-shrink:0; }
+	.rd-comment-body{ min-width:0; }
+	.rd-comment-autor{ font-size:11.5px; font-weight:600; }
+	.rd-comment-texto{ font-size:12.5px; color:var(--rd-dim); word-break:break-word; }
+	.rd-comment-fecha{ font-size:10px; color:var(--rd-faint); margin-top:2px; }
+	.rd-comment-empty{ font-size:12px; color:var(--rd-faint); padding:6px 0; }
+	.rd-comment-form{ display:flex; gap:8px; margin-top:4px; }
+	.rd-comment-form textarea{ flex:1; resize:none; height:38px; border:1px solid var(--rd-border); border-radius:7px;
+		padding:8px 10px; font-size:12.5px; font-family:'Inter',sans-serif; }
+
 	@media (max-width:880px){
 		.rd-grid{ grid-template-columns:1fr; }
 		.rd-feed{ grid-template-columns:repeat(2,1fr); }
@@ -129,55 +157,100 @@
 	<!-- FEED -->
 	<div class="rd-feed" id="rdFeed"></div>
 
-</div>
+	<!-- FAB móvil -->
+	<button class="rd-fab" onclick="rdAbrirModal()">+ Compartir</button>
 
-<!-- FAB móvil -->
-<button class="rd-fab" onclick="rdAbrirModal()">+ Compartir</button>
-
-<!-- MODAL: publicar -->
-<div class="rd-modal-bg" id="rdModalBg">
-	<div class="rd-modal">
-		<div class="rd-modal-head">
-			<h3>Compartir foto o video</h3>
-			<div class="rd-modal-close" onclick="rdCerrarModal()">✕</div>
-		</div>
-		<div class="rd-modal-body">
-
-			<div class="rd-field">
-				<label>Archivo (foto o video)</label>
-				<div class="rd-drop" id="rdDropZone">Toca para elegir un archivo</div>
-				<input type="file" id="rdArchivo" accept="image/*,video/*" style="display:none;">
+	<!-- MODAL: publicar -->
+	<!-- IMPORTANTE: este modal debe vivir DENTRO de .rd-wrap: las variables
+	     --rd-win/--rd-border/--rd-ink/etc. se definen como custom properties
+	     en el selector .rd-wrap, así que solo están disponibles para sus
+	     descendientes. Si el modal queda fuera (como estaba antes), esas
+	     variables llegan "unset" y el cuadro se ve sin fondo, sin borde y
+	     casi sin texto -> parece que "no se ve nada" al abrirlo. -->
+	<div class="rd-modal-bg" id="rdModalBg">
+		<div class="rd-modal">
+			<div class="rd-modal-head">
+				<h3>Compartir foto o video</h3>
+				<div class="rd-modal-close" onclick="rdCerrarModal()">✕</div>
 			</div>
+			<div class="rd-modal-body">
 
-			<div class="rd-field">
-				<label>Título</label>
-				<input type="text" id="rdTitulo" placeholder="Ej. Atardecer sobre la presa">
+				<div class="rd-field">
+					<label>Archivo (foto o video)</label>
+					<div class="rd-drop" id="rdDropZone">Toca para elegir un archivo</div>
+					<input type="file" id="rdArchivo" accept="image/*,video/*" style="display:none;">
+				</div>
+
+				<div class="rd-field">
+					<label>Título</label>
+					<input type="text" id="rdTitulo" placeholder="Ej. Atardecer sobre la presa">
+				</div>
+
+				<div class="rd-field">
+					<label>Sitio de interés</label>
+					<select id="rdSitioSelect"><option value="">Sin sitio específico</option></select>
+				</div>
+
+				<div class="rd-field">
+					<label>Ubicación</label>
+					<div id="rdMapaModal" style="height:160px; border-radius:8px; border:1px solid var(--rd-border);"></div>
+					<button type="button" class="rd-btn" style="margin-top:8px; background:var(--rd-ink);" onclick="rdUsarMiUbicacion()">Usar mi ubicación actual</button>
+				</div>
+
+				<button class="rd-btn" style="width:100%; padding:11px;" onclick="rdPublicar()">Publicar</button>
+
 			</div>
-
-			<div class="rd-field">
-				<label>Sitio de interés</label>
-				<select id="rdSitioSelect"><option value="">Sin sitio específico</option></select>
-			</div>
-
-			<div class="rd-field">
-				<label>Ubicación</label>
-				<div id="rdMapaModal" style="height:160px; border-radius:8px; border:1px solid var(--rd-border);"></div>
-				<button type="button" class="rd-btn" style="margin-top:8px; background:var(--rd-ink);" onclick="rdUsarMiUbicacion()">Usar mi ubicación actual</button>
-			</div>
-
-			<button class="rd-btn" style="width:100%; padding:11px;" onclick="rdPublicar()">Publicar</button>
-
 		</div>
 	</div>
+
+	<!-- MODAL: detalle de publicación (autor, like, comentarios) -->
+	<div class="rd-modal-bg" id="rdDetalleBg">
+		<div class="rd-modal" style="width:520px;">
+			<div class="rd-modal-head">
+				<h3 id="rdDetTitulo">Publicación</h3>
+				<div class="rd-modal-close" onclick="rdCerrarDetalle()">✕</div>
+			</div>
+			<div class="rd-modal-body">
+
+				<div class="rd-det-media" id="rdDetMedia"></div>
+
+				<div class="rd-det-autor">
+					<img class="rd-det-avatar" id="rdDetAvatar" src="">
+					<div>
+						<div class="rd-det-autor-name" id="rdDetAutor">—</div>
+						<div class="rd-det-autor-meta" id="rdDetMeta">—</div>
+					</div>
+				</div>
+
+				<div class="rd-det-like" id="rdDetLike">▲ <span id="rdDetLikeTexto">Me gusta</span></div>
+
+				<div class="rd-det-desc" id="rdDetDesc"></div>
+
+				<div class="rd-comentarios">
+					<h4>Comentarios</h4>
+					<div id="rdComentariosList">Cargando…</div>
+					<div class="rd-comment-form">
+						<textarea id="rdComentarioTexto" placeholder="Escribe un comentario…" maxlength="500"></textarea>
+						<button class="rd-btn" onclick="rdEnviarComentario()">Enviar</button>
+					</div>
+				</div>
+
+			</div>
+		</div>
+	</div>
+
 </div>
 
-<script src="https://maps.googleapis.com/maps/api/js?key=<?php echo GOOGLEAPI ?>&libraries=places" defer async></script>
+<!-- El Google Maps JS API ya se carga una vez en kernel/tpl/head.tpl;
+     cargarlo de nuevo aquí disparaba el warning:
+     "You have included the Google Maps JavaScript API multiple times" -->
 <script>
 	var RD_URL = "<?php echo URL ?>";
 	var RD_LOGGED = <?php echo ($UserID != null) ? 'true' : 'false' ?>;
 	var rdMap, rdMapModal, rdMarker, rdMarkers = [];
 	var rdSitioActivo = "";
 	var rdOrden = "recientes";
+	var rdDetalleID = null;
 	var rdLatSel = 20.6597, rdLngSel = -103.3496; // Guadalajara por defecto
 
 	document.addEventListener("DOMContentLoaded", function() {
@@ -283,13 +356,10 @@
 		pubs.forEach(function(p) {
 			var card = document.createElement("div");
 			card.className = "rd-card";
-			var mediaURL = RD_URL + "/assets/media/galeria/" + p.archivo;
-			var mediaHTML = p.tipo === "video"
-				? "<video src='" + mediaURL + "' muted></video>"
-				: "<img src='" + mediaURL + "' loading='lazy'>";
+			var mediaURL = RD_URL + "/assets/media/galeria/" + encodeURIComponent(p.archivo);
 
 			card.innerHTML =
-				"<div class='rd-card-media'>" + mediaHTML + "<span class='rd-card-tag'>" + (p.tipo === "video" ? "VIDEO" : "FOTO") + "</span></div>" +
+				"<div class='rd-card-media'></div>" +
 				"<div class='rd-card-body'>" +
 					"<div class='rd-card-title'>" + (p.titulo || "Sin título") + "</div>" +
 					"<div class='rd-card-meta'>" +
@@ -298,9 +368,31 @@
 					"</div>" +
 				"</div>";
 
+			// el <img>/<video> se arma aparte (no con innerHTML) para poder
+			// engancharle un listener de "error" y mostrar un aviso legible
+			// en vez del ícono roto del navegador cuando el archivo no carga.
+			var mediaCont = card.querySelector(".rd-card-media");
+			var mediaEl = p.tipo === "video" ? document.createElement("video") : document.createElement("img");
+			mediaEl.src = mediaURL;
+			if (p.tipo === "video") { mediaEl.muted = true; } else { mediaEl.loading = "lazy"; }
+			mediaEl.addEventListener("error", function() {
+				mediaCont.innerHTML = "<div class='rd-noimg'>Imagen no disponible</div>";
+				mediaCont.appendChild(rdCrearTag(p.tipo));
+			});
+			mediaCont.appendChild(mediaEl);
+			mediaCont.appendChild(rdCrearTag(p.tipo));
+
 			card.querySelector(".rd-vote").addEventListener("click", function(e) { e.stopPropagation(); rdVotar(p.id, this); });
+			card.addEventListener("click", function() { rdAbrirDetalle(p.id); });
 			feed.appendChild(card);
 		});
+	}
+
+	function rdCrearTag(tipo) {
+		var tag = document.createElement("span");
+		tag.className = "rd-card-tag";
+		tag.textContent = tipo === "video" ? "VIDEO" : "FOTO";
+		return tag;
 	}
 
 	function rdPintarTop(top5) {
@@ -308,28 +400,137 @@
 		if (!top5.length) { cont.innerHTML = "<p style='font-size:12.5px;color:#A7ACB4;'>Aún no hay publicaciones.</p>"; return; }
 		cont.innerHTML = "";
 		top5.forEach(function(p, i) {
-			var mediaURL = RD_URL + "/assets/media/galeria/" + p.archivo;
+			var mediaURL = RD_URL + "/assets/media/galeria/" + encodeURIComponent(p.archivo);
 			var row = document.createElement("div");
 			row.className = "rd-top-item";
 			row.innerHTML =
 				"<span class='rd-top-rank'>" + (i + 1) + "</span>" +
-				"<img class='rd-top-thumb' src='" + (p.tipo === "video" ? mediaURL : mediaURL) + "'>" +
+				"<img class='rd-top-thumb'>" +
 				"<div class='rd-top-info'>" +
 					"<div class='rd-top-title'>" + (p.titulo || "Sin título") + "</div>" +
 					"<div class='rd-top-votos'>" + p.votos + " votos</div>" +
 				"</div>";
+
+			var thumb = row.querySelector(".rd-top-thumb");
+			thumb.src = mediaURL;
+			thumb.addEventListener("error", function() { thumb.removeAttribute("src"); thumb.style.background = "var(--rd-border-strong)"; });
+
+			row.addEventListener("click", function() { rdAbrirDetalle(p.id); });
 			cont.appendChild(row);
 		});
 	}
 
-	function rdVotar(id, el) {
+	function rdVotar(id, el, onDone) {
 		if (!RD_LOGGED) { if (window.openLoginModal) { window.openLoginModal(); } else { alert("Inicia sesión para votar."); } return; }
 		fetch(RD_URL + "/ajax/galeria_votar.php", { method: "POST", body: new URLSearchParams({ publicacion_id: id }) })
 			.then(function(r) { return r.json(); })
 			.then(function(data) {
 				if (!data.ok) return;
-				el.textContent = "▲ " + data.votos;
 				el.classList.toggle("is-active", data.voto_activo);
+				if (typeof onDone === "function") { onDone(data.votos); }
+				else { el.textContent = "▲ " + data.votos; }
+			});
+	}
+
+	// ---------------- MODAL DETALLE (autor · like · comentarios) ----------------
+	function rdAbrirDetalle(id) {
+		rdDetalleID = id;
+		document.getElementById("rdDetTitulo").textContent = "Cargando…";
+		document.getElementById("rdDetMedia").innerHTML = "";
+		document.getElementById("rdDetDesc").textContent = "";
+		document.getElementById("rdComentariosList").innerHTML = "Cargando…";
+		document.getElementById("rdDetalleBg").classList.add("is-open");
+
+		fetch(RD_URL + "/ajax/galeria_detalle.php", { method: "POST", body: new URLSearchParams({ accion: "ver", publicacion_id: id }) })
+			.then(function(r) { return r.json(); })
+			.then(function(data) {
+				if (!data.ok) { document.getElementById("rdDetTitulo").textContent = "No se pudo cargar"; return; }
+				rdPintarDetalle(data.publicacion, data.comentarios);
+			})
+			.catch(function() { document.getElementById("rdDetTitulo").textContent = "No se pudo cargar"; });
+	}
+
+	function rdCerrarDetalle() {
+		document.getElementById("rdDetalleBg").classList.remove("is-open");
+		rdDetalleID = null;
+	}
+
+	function rdPintarDetalle(p, comentarios) {
+		document.getElementById("rdDetTitulo").textContent = p.titulo || "Sin título";
+
+		var mediaURL = RD_URL + "/assets/media/galeria/" + encodeURIComponent(p.archivo);
+		var mediaCont = document.getElementById("rdDetMedia");
+		mediaCont.innerHTML = "";
+		var mediaEl = p.tipo === "video" ? document.createElement("video") : document.createElement("img");
+		mediaEl.src = mediaURL;
+		if (p.tipo === "video") { mediaEl.controls = true; } else { mediaEl.loading = "lazy"; }
+		mediaEl.addEventListener("error", function() { mediaCont.innerHTML = "<div class='rd-noimg'>Imagen no disponible</div>"; });
+		mediaCont.appendChild(mediaEl);
+
+		var avatarURL = p.autor_avatar ? (RD_URL + "/assets/images/avatars/" + p.autor_avatar) : (RD_URL + "/assets/images/avatars/default.jpg");
+		var avatarEl = document.getElementById("rdDetAvatar");
+		avatarEl.style.visibility = "visible";
+		avatarEl.src = avatarURL;
+		avatarEl.onerror = function() { avatarEl.style.visibility = "hidden"; };
+
+		document.getElementById("rdDetAutor").textContent = p.autor_nombre || p.autor || "Piloto";
+		document.getElementById("rdDetMeta").textContent = (p.sitio_nombre || "Sin sitio") + " · " + p.vistas + " vistas";
+		document.getElementById("rdDetDesc").textContent = p.descripcion || "";
+
+		var likeBtn = document.getElementById("rdDetLike");
+		likeBtn.classList.toggle("is-active", !!p.yaVote);
+		document.getElementById("rdDetLikeTexto").textContent = p.votos + " Me gusta";
+		likeBtn.onclick = function() {
+			rdVotar(p.id, likeBtn, function(nuevoVotos) {
+				document.getElementById("rdDetLikeTexto").textContent = nuevoVotos + " Me gusta";
+			});
+		};
+
+		rdPintarComentarios(comentarios);
+	}
+
+	function rdPintarComentarios(comentarios) {
+		var cont = document.getElementById("rdComentariosList");
+		if (!comentarios.length) { cont.innerHTML = "<div class='rd-comment-empty'>Sé el primero en comentar.</div>"; return; }
+		cont.innerHTML = "";
+		comentarios.forEach(function(c) { cont.appendChild(rdCrearComentarioEl(c)); });
+	}
+
+	function rdCrearComentarioEl(c) {
+		var item = document.createElement("div");
+		item.className = "rd-comment-item";
+		var avatarURL = c.autor_avatar ? (RD_URL + "/assets/images/avatars/" + c.autor_avatar) : (RD_URL + "/assets/images/avatars/default.jpg");
+		item.innerHTML =
+			"<img class='rd-comment-avatar' src='" + avatarURL + "'>" +
+			"<div class='rd-comment-body'>" +
+				"<div class='rd-comment-autor'>" + (c.autor || "Piloto") + "</div>" +
+				"<div class='rd-comment-texto'></div>" +
+				"<div class='rd-comment-fecha'>" + c.idatetime + "</div>" +
+			"</div>";
+		// el texto del comentario se inserta con textContent (no innerHTML)
+		// para que un comentario no pueda inyectar HTML/JS de otro usuario
+		item.querySelector(".rd-comment-texto").textContent = c.comentario;
+		item.querySelector(".rd-comment-avatar").addEventListener("error", function() { this.style.visibility = "hidden"; });
+		return item;
+	}
+
+	function rdEnviarComentario() {
+		if (!RD_LOGGED) { if (window.openLoginModal) { window.openLoginModal(); } else { alert("Inicia sesión para comentar."); } return; }
+		if (!rdDetalleID) return;
+
+		var textarea = document.getElementById("rdComentarioTexto");
+		var texto = textarea.value.trim();
+		if (!texto) return;
+
+		fetch(RD_URL + "/ajax/galeria_detalle.php", { method: "POST", body: new URLSearchParams({ accion: "comentar", publicacion_id: rdDetalleID, comentario: texto }) })
+			.then(function(r) { return r.json(); })
+			.then(function(data) {
+				if (!data.ok) { alert("No se pudo enviar el comentario."); return; }
+				var cont = document.getElementById("rdComentariosList");
+				var vacio = cont.querySelector(".rd-comment-empty");
+				if (vacio) { cont.innerHTML = ""; }
+				cont.appendChild(rdCrearComentarioEl(data.comentario));
+				textarea.value = "";
 			});
 	}
 
