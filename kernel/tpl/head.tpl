@@ -47,6 +47,50 @@
 		.pilot-id.is-guest .dot{ background:var(--ink-faint); }
 		.pilot-id a.login-link{ color:var(--accent); font-weight:600; }
 
+		.topbar-profile{ display:flex; align-items:center; gap:10px; }
+		.topbar-profile .login-button,
+		.topbar-profile .logout-button{
+			display:inline-flex; align-items:center; justify-content:center;
+			font:inherit; font-size:11px; font-weight:600; padding:7px 12px; border-radius:99px;
+			border:1px solid var(--border-strong); background:var(--win); color:var(--ink); cursor:pointer;
+		}
+		.topbar-profile .logout-button{ color:var(--red); background:var(--red-soft); border-color:transparent; }
+
+		/* ===== MODAL LOGIN / REGISTRO ===== */
+		.login-modal-overlay{
+			position:fixed; inset:0; z-index:90; background:rgba(20,23,26,0.54); backdrop-filter:blur(4px);
+			display:none; align-items:center; justify-content:center; padding:20px;
+		}
+		.login-modal-overlay.is-open{ display:flex; }
+		.login-modal-shell{
+			position:relative; width:min(100%, 440px); max-height:90vh; overflow-y:auto;
+			background:var(--win); border:1px solid var(--border-strong); border-radius:16px;
+			box-shadow:0 30px 100px rgba(20,23,26,0.35);
+		}
+		.login-modal-shell .modal-close{
+			position:absolute; top:10px; right:14px; border:none; background:transparent;
+			font-size:26px; line-height:1; color:var(--ink-dim); cursor:pointer;
+		}
+		.login-modal-shell .modal-close:hover{ color:var(--ink); }
+		.login-modal-body{ padding:30px 28px 28px; }
+		.login-modal-brand{ display:flex; align-items:center; gap:9px; margin-bottom:18px; }
+
+		.auth-tabs{ display:flex; border:1px solid var(--border); border-radius:9px; overflow:hidden; }
+		.auth-tab{
+			flex:1; font-family:var(--sans); font-size:13px; font-weight:600; color:var(--ink-dim);
+			background:none; border:none; padding:11px 12px; cursor:pointer;
+		}
+		.auth-tab.is-active{ color:var(--ink); background:var(--desk); }
+
+		.field-label{ display:block; font-size:11.5px; color:var(--ink-dim); margin-bottom:5px; }
+		.field-input{
+			width:100%; border:1px solid var(--border); border-radius:7px; padding:9px 11px;
+			font-size:13px; font-family:var(--sans); background:var(--win); color:var(--ink);
+		}
+		.field-input:focus{ outline:none; border-color:var(--accent); }
+		.field-row{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+		@media (max-width:480px){ .field-row{ grid-template-columns:1fr; gap:0; } }
+
 		/* ===== INTRO reutilizable por los themes ===== */
 		.eyebrow{ font-family:var(--mono); font-size:11px; color:var(--accent); letter-spacing:1.5px; text-transform:uppercase; margin-bottom:8px; }
 

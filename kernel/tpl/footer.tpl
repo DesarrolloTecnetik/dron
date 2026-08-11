@@ -34,6 +34,25 @@
 
 	}
 
+	// ---------------------------------------------------------------
+	// Ejecuta el/los <script> que devuelven los endpoints ajax
+	// ($CR->updateJS() / $CR->refresh()). Insertarlos con innerHTML
+	// no los ejecuta, así que se extraen y se corren en scope global.
+	// ---------------------------------------------------------------
+	function runServerScript(html) {
+
+		var matches = html.match(/<script[^>]*>([\s\S]*?)<\/script>/gi) || [];
+
+		matches.forEach(function(tag) {
+
+			var code = tag.replace(/<script[^>]*>/i, '').replace(/<\/script>/i, '');
+
+			try { (0, eval)(code); } catch (e) { console.error('RADAR: error ejecutando respuesta del servidor', e); }
+
+		});
+
+	}
+
 	// =================================================================
 	// GEOCERCAS -> mapa Leaflet + semáforo
 	// =================================================================

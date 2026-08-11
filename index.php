@@ -51,10 +51,21 @@
 	// solo letras, números, guiones -> evita path traversal
 	$action = preg_replace('/[^a-zA-Z0-9\-_]/', '', $action);
 
-	// /login se resuelve por la dashboard principal para desplegar
-	// el modal de acceso dentro del layout. No llevamos a una página aislada.
-	if ($action === 'login') {
+	// /login ya no es una página aparte: es el dashboard con el modal de acceso
+	// abierto automáticamente (el modal en sí vive en kernel/tpl/login_modal.tpl
+	// y se incluye en todas las páginas para usuarios no logueados).
+	$autoOpenLogin = false;
+	if( $action === 'login' ) {
+
+		if( $UserID >= 1 ) {
+			// ya hay sesión activa -> nada que mostrar, al dashboard
+			header('Location: ' . URL . '/inicio');
+			exit;
+		}
+
 		$action = 'inicio';
+		$autoOpenLogin = true;
+
 	}
 
 	$themeFile = PATH.'/kernel/themes/'.$action.'.php';
@@ -69,17 +80,11 @@
 
 	require PATH.'/kernel/tpl/head.tpl';
 
-	if( $action != 'login' ) {
-		require PATH.'/kernel/tpl/body.tpl';
-	}
+	require PATH.'/kernel/tpl/body.tpl';
 
 		if( $action == 'nofound' ) {
 
 			echo '<div class="win s12"><div class="win-body"><p class="desc">La página que buscas no existe.</p></div></div>';
-
-		} elseif ($action == 'login') {
-
-			require PATH.'/kernel/themes/login.php';
 
 		} else {
 
@@ -87,8 +92,6 @@
 
 		}
 
-	if( $action != 'login' ) {
-		require PATH.'/kernel/tpl/footer.tpl';
-	}
+	require PATH.'/kernel/tpl/footer.tpl';
 
 ?>

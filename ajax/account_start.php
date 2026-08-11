@@ -183,7 +183,7 @@
                      $CR->updateData("login", "status", 1, "userid", $usId);
 
                      // goLogout is null
-                     if( $goLogout == null ) { $goURL = URL."/redirect"; } else { $goURL = $_SESSION['gologout']; }
+                     if( $goLogout == null ) { $goURL = URL."/inicio"; } else { $goURL = $_SESSION['gologout']; }
 
                      // add log
                      $CR->logs('Inicio de sesión', 'El usuario se ha identificado correctamente.', $usId, $usServ);

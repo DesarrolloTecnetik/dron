@@ -201,6 +201,10 @@
 
 </div>
 
+<?php if( !empty($_GET['logout']) ) { ?>
+	<script>document.addEventListener('DOMContentLoaded', function() { alerta('Sesión cerrada.', 'success'); });</script>
+<?php } ?>
+
 <script>
 	window.__radarGeo = <?php echo json_encode(array(
 		'lat' => DRONE_BASE_LAT,

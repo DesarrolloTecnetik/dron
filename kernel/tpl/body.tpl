@@ -26,10 +26,15 @@
 		<?php } ?>
 	</div>
 
-	<?php if( $UserID >= 1 ) { ?>
-		<div class="pilot-id"><span class="dot"></span><?php echo strtoupper($pilotUser) ?></div>
-	<?php } else { ?>
-		<div class="pilot-id is-guest"><span class="dot"></span><a class="login-link" href="<?php echo URL ?>/login">Iniciar sesión</a></div>
-	<?php } ?>
+	<div class="topbar-profile">
+		<?php if( $UserID >= 1 ) { ?>
+			<div class="pilot-id"><span class="dot"></span><?php echo strtoupper($pilotUser) ?></div>
+			<a class="logout-button" href="<?php echo URL ?>/ajax/account_logout.php">Cerrar sesión</a>
+		<?php } else { ?>
+			<button type="button" class="login-button" data-open-login>Iniciar sesión</button>
+		<?php } ?>
+	</div>
 
 </div>
+
+<?php require PATH.'/kernel/tpl/login_modal.tpl'; ?>

@@ -323,7 +323,7 @@
 	}
 
 	function rdVotar(id, el) {
-		if (!RD_LOGGED) { alert("Inicia sesión para votar."); return; }
+		if (!RD_LOGGED) { if (window.openLoginModal) { window.openLoginModal(); } else { alert("Inicia sesión para votar."); } return; }
 		fetch(RD_URL + "/ajax/galeria_votar.php", { method: "POST", body: new URLSearchParams({ publicacion_id: id }) })
 			.then(function(r) { return r.json(); })
 			.then(function(data) {
@@ -335,7 +335,7 @@
 
 	// ---------------- MODAL PUBLICAR ----------------
 	function rdAbrirModal() {
-		if (!RD_LOGGED) { alert("Inicia sesión para compartir contenido."); return; }
+		if (!RD_LOGGED) { if (window.openLoginModal) { window.openLoginModal(); } else { alert("Inicia sesión para compartir contenido."); } return; }
 		document.getElementById("rdModalBg").classList.add("is-open");
 		setTimeout(function() {
 			rdMapModal = new google.maps.Map(document.getElementById("rdMapaModal"), { center: { lat: rdLatSel, lng: rdLngSel }, zoom: 11 });
