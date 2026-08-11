@@ -10,6 +10,7 @@
 		'bitacora'   => array('label' => 'Bitácora', 'href' => URL.'/inicio/bitacora'),
 		'noticias'   => array('label' => 'Noticias', 'href' => URL.'/inicio/noticias'),
 		'equipo'     => array('label' => 'Equipo', 'href' => URL.'/inicio/equipo'),
+		'perfil'     => array('label' => 'Perfil', 'href' => URL.'/inicio/perfil'),
 	);
 	$pilotUser = ($UserID >= 1) ? $User->user($UserID, 'user') : null;
 ?>
